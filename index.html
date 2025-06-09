@@ -2,227 +2,184 @@
 <html lang="bn">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Ghost Stories Hub</title>
+  <style>/* ========== Global ========== */
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family: sans-serif; background:#121212; color:#eee; }
+.hidden { display:none; }
+.screen { position:relative; width:100%; height:100vh; overflow:auto; }
+
+/* ========== Login Screen ========== */
+#login-screen { display:flex; align-items:center; justify-content:center; }
+#login-screen .bg-image {
+  position:absolute; top:0; left:0; width:100%; height:100%;
+  background: url('assets/images/Signin.png') center/cover no-repeat;
+  z-index:0;
+}
+#login-btn {
+  position:relative; z-index:1;
+  padding:12px 24px; font-size:1rem;
+  background:#4285F4; color:#fff;
+  border:none; border-radius:4px;
+  cursor:pointer;
+}
+
+/* ========== Feed Screen ========== */
+.feed-header img {
+  width:100%; height:auto; display:block;
+}
+.feed-controls {
+  padding:10px;
+  display:flex; flex-direction:column; align-items:flex-start; gap:10px;
+}
+.btn {
+  padding:8px 16px; background:#5e0d0d; color:#fff;
+  border:none; border-radius:4px; cursor:pointer;
+}
+.form {
+  display:flex; flex-direction:column; gap:8px;
+  width:100%;
+}
+.form input, .form textarea {
+  padding:8px; background:#222; border:1px solid #555;
+  border-radius:4px; color:#fff; width:100%;
+}
+#posts {
+  padding:10px;
+  display:flex; flex-direction:column; gap:12px;
+}
+.post-card {
+  background: url('assets/images/Postbg.png') center/cover no-repeat;
+  border-radius:6px; padding:16px;
+}
+.post-card h3 { margin-bottom:8px; }
+.post-card p.meta {
+  font-size:0.8rem; color:#ccc; margin-top:10px;
+  text-decoration:underline; cursor:pointer;
+}</style>
   <!-- Firebase Compat SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-  <style>
-    /* ============ Global ============ */
-    body { margin:0; font-family:sans-serif; background:#121212; color:#eee; }
-    .hidden { display:none; }
-    .center { display:flex; flex-direction:column; align-items:center; justify-content:center; }
-    button { cursor:pointer; border:none; border-radius:5px; padding:8px 16px; }
-
-    /* ============ Login ============ */
-    #login-screen { height:100vh; }
-    #login-screen h1 { font-size:2.5rem; margin-bottom:20px; }
-    #login-btn { background:#4285F4; color:#fff; }
-
-    /* ============ Feed ============ */
-    #feed { max-width:600px; margin:auto; padding:10px; }
-    #hub-title { text-align:center; font-size:2rem; color:#ff5e5e; margin:20px 0; }
-    #write-btn { background:#5e0d0d; color:#fff; margin-bottom:10px; }
-    #story-form { display:flex; flex-direction:column; gap:10px; margin-bottom:20px; }
-    #story-form input,
-    #story-form textarea {
-      background:#222; color:#fff; border:1px solid #555; border-radius:5px; padding:8px; width:100%;
-    }
-    #story-form button { background:#7d1e1e; color:#fff; }
-
-    .story-card {
-      background:#2e2e3a;   /* সব পোস্টের জন্য একই কালার */
-      border-radius:8px; padding:15px; margin-bottom:15px;
-    }
-    .story-card h3 { margin:0 0 8px; }
-    .meta { font-size:0.8rem; color:#bbb; }
-    .clickable { color:#7de6ff; cursor:pointer; text-decoration:underline; }
-
-    /* ============ Profile ============ */
-    #profile { max-width:600px; margin:auto; padding:10px; }
-    .profile-header {
-      position:relative; text-align:center; padding-top:60px;
-    }
-    .profile-bg {
-      height:150px; background:#5e0d0d;
-      border-bottom-left-radius:10px; border-bottom-right-radius:10px;
-    }
-    .profile-pic {
-      width:120px; height:120px; border-radius:50%;
-      position:absolute; top:90px; left:50%; transform:translateX(-50%);
-      border:5px solid #121212;
-    }
-    .profile-header h2 { margin-top:70px; }
-    .profile-header p { margin:5px 0 15px; font-size:0.9rem; color:#ccc; }
-    #back-btn { background:#444; color:#fff; }
-  </style>
 </head>
 <body>
 
-  <!-- Login Screen -->
-  <div id="login-screen" class="center">
-    <h1>Ghost Stories Hub</h1>
-    <button id="login-btn">Sign in with Google</button>
+  <!-- LOGIN SCREEN -->
+  <div id="login-screen" class="screen">
+    <div class="bg-image"></div>
+    <button id="login-btn" class="btn google">Sign in with Google</button>
   </div>
 
-  <!-- Feed Screen -->
-  <div id="feed" class="hidden">
-    <h1 id="hub-title">👻 Ghost Stories Hub 👻</h1>
-    <button id="write-btn">Write a Story</button>
-    <div id="story-form" class="hidden">
-      <input type="text" id="title" placeholder="Title" />
-      <textarea id="body" rows="4" placeholder="Your horror story..."></textarea>
-      <button id="post-btn">Post Story</button>
+  <!-- FEED SCREEN -->
+  <div id="feed-screen" class="screen hidden">
+    <header class="feed-header">
+      <img src="assets/images/Feed.png" alt="Feed Header" />
+    </header>
+    <div class="feed-controls">
+      <button id="write-toggle" class="btn">Write a Story</button>
+      <div id="story-form" class="form hidden">
+        <input id="title" placeholder="Title" />
+        <textarea id="body" rows="4" placeholder="Your horror story..."></textarea>
+        <button id="post-btn" class="btn">Post Story</button>
+      </div>
     </div>
-    <div id="posts"></div>
+    <main id="posts"></main>
   </div>
 
-  <!-- Profile Screen -->
-  <div id="profile" class="hidden">
-    <div class="profile-header">
-      <div class="profile-bg"></div>
-      <img src="profile.png" class="profile-pic" alt="Profile Pic"/>
-      <h2 id="prof-name"></h2>
-      <p id="prof-date"></p>
-      <button id="back-btn">Back to Feed</button>
-    </div>
-    <div id="user-posts" style="margin-top:20px;"></div>
-  </div>
+  <script>// — Firebase Initialization — 
+const firebaseConfig = {
+  apiKey: "AIzaSyAepf_M4EeW7QbXGKVc21Yb4nust240c4c",
+  authDomain: "ghost-stories-hub-e372e.firebaseapp.com",
+  databaseURL: "https://ghost-stories-hub-e372e-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "ghost-stories-hub-e372e",
+  storageBucket: "ghost-stories-hub-e372e.firebasestorage.app",
+  messagingSenderId: "387198854399",
+  appId: "1:387198854399:web:cc70ebb7d6a19cc15e18ca"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.database();
 
-  <script>
-    // ——— Firebase Initialization ———
-    const firebaseConfig = {
-      apiKey: "AIzaSyDQDghMUXcjcLufG3xU94pUx-J0r9TUu6Q",
-      authDomain: "gconnect-7fe65.firebaseapp.com",
-      databaseURL: "https://gconnect-7fe65-default-rtdb.asia-southeast1.firebasedatabase.app",
-      projectId: "gconnect-7fe65",
-      storageBucket: "gconnect-7fe65.appspot.com",
-      messagingSenderId: "484729292789",
-      appId: "1:484729292789:web:8e5391b09d3581c90b02bc"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db   = firebase.database();
+// — DOM References —
+const loginScreen = document.getElementById('login-screen');
+const loginBtn    = document.getElementById('login-btn');
+const feedScreen  = document.getElementById('feed-screen');
+const writeToggle = document.getElementById('write-toggle');
+const storyForm   = document.getElementById('story-form');
+const postBtn     = document.getElementById('post-btn');
+const postsEl     = document.getElementById('posts');
 
-    // ——— DOM References ———
-    const loginScreen = document.getElementById('login-screen');
-    const loginBtn    = document.getElementById('login-btn');
-    const feed        = document.getElementById('feed');
-    const writeBtn    = document.getElementById('write-btn');
-    const formDiv     = document.getElementById('story-form');
-    const postBtn     = document.getElementById('post-btn');
-    const postsDiv    = document.getElementById('posts');
-    const profileDiv  = document.getElementById('profile');
-    const backBtn     = document.getElementById('back-btn');
-    const profName    = document.getElementById('prof-name');
-    const profDate    = document.getElementById('prof-date');
-    const userPostsDiv= document.getElementById('user-posts');
+// — Auth State Listener —
+auth.onAuthStateChanged(user => {
+  if (user) {
+    showScreen('feed');
+    loadFeed();
+    saveUser(user);
+  } else {
+    showScreen('login');
+  }
+});
 
-    let currentUser = null;
+// — Show Screens —
+function showScreen(name) {
+  loginScreen.classList.toggle('hidden', name !== 'login');
+  feedScreen.classList.toggle('hidden', name !== 'feed');
+}
 
-    // ——— Auth State Listener ———
-    auth.onAuthStateChanged(user => {
-      if (user) {
-        currentUser = user;
-        saveUser(user);
-        showScreen('feed');
-        loadFeed();
-      } else {
-        showScreen('login');
-      }
+// — Login Button —
+loginBtn.onclick = () => {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider)
+    .catch(err => alert('Sign-in error: ' + err.message));
+};
+
+// — Save User Info —
+function saveUser(u) {
+  db.ref('users/' + u.uid).set({
+    email: u.email,
+    username: u.displayName,
+    createdAt: u.metadata.creationTime
+  });
+}
+
+// — Toggle Story Form —
+writeToggle.onclick = () => {
+  storyForm.classList.toggle('hidden');
+};
+
+// — Post Story —
+postBtn.onclick = () => {
+  const title = document.getElementById('title').value.trim();
+  const body  = document.getElementById('body').value.trim();
+  if (!title || !body) return alert('Title এবং Story দুইটাই প্রয়োজন');
+  db.ref('posts').push({
+    uid: auth.currentUser.uid,
+    title, story: body,
+    timestamp: new Date().toISOString()
+  });
+  storyForm.classList.add('hidden');
+  document.getElementById('title').value = '';
+  document.getElementById('body').value  = '';
+};
+
+// — Load Feed —
+function loadFeed() {
+  db.ref('posts').on('value', snap => {
+    const data = snap.val() || {};
+    const arr  = Object.entries(data).map(([,v]) => v)
+                     .sort(() => 0.5 - Math.random());
+    postsEl.innerHTML = '';
+    arr.forEach(post => {
+      const card = document.createElement('div');
+      card.className = 'post-card';
+      card.innerHTML = `
+        <h3>${post.title}</h3>
+        <p>${post.story}</p>
+        <p class="meta">${post.username} · ${new Date(post.timestamp).toLocaleString()}</p>`;
+      postsEl.appendChild(card);
     });
-
-    // ——— Save User to DB ———
-    function saveUser(u) {
-      db.ref('users/' + u.uid).set({
-        username: u.displayName,
-        createdAt: u.metadata.creationTime
-      });
-    }
-
-    // ——— Show/Hide Screens ———
-    function showScreen(name) {
-      loginScreen.classList.toggle('hidden', name !== 'login');
-      feed.classList.toggle('hidden',     name !== 'feed');
-      profileDiv.classList.toggle('hidden', name !== 'profile');
-    }
-
-    // ——— Login Button ———
-    loginBtn.onclick = () => {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider)
-        .catch(err => alert('Sign-in error: ' + err.message));
-    };
-
-    // ——— Toggle Story Form ———
-    writeBtn.onclick = () => formDiv.classList.toggle('hidden');
-
-    // ——— Post Story ———
-    postBtn.onclick = () => {
-      const title = document.getElementById('title').value.trim();
-      const body  = document.getElementById('body').value.trim();
-      if (!title || !body) return alert('Title & story both required!');
-      db.ref('posts').push({
-        uid: currentUser.uid,
-        username: currentUser.displayName,
-        title,
-        story: body,
-        timestamp: new Date().toISOString()
-      });
-      formDiv.classList.add('hidden');
-      document.getElementById('title').value = '';
-      document.getElementById('body').value  = '';
-    };
-
-    // ——— Load Feed ———
-    function loadFeed() {
-      db.ref('posts').on('value', snap => {
-        const data = snap.val() || {};
-        const arr = Object.entries(data).map(([_,v])=>v)
-                       .sort(() => 0.5 - Math.random());
-        postsDiv.innerHTML = '';
-        arr.forEach(post => {
-          const card = document.createElement('div');
-          card.className = 'story-card';
-          card.innerHTML = `
-            <h3>${post.title}</h3>
-            <p>${post.story}</p>
-            <p class="meta">
-              <span class="clickable" data-uid="${post.uid}">👤 ${post.username}</span> · ${new Date(post.timestamp).toLocaleString()}
-            </p>`;
-          card.querySelector('.clickable')
-              .addEventListener('click', e => showProfile(e.target.dataset.uid));
-          postsDiv.appendChild(card);
-        });
-      });
-    }
-
-    // ——— Show Profile ———
-    function showProfile(uid) {
-      showScreen('profile');
-      // User info
-      db.ref('users/' + uid).once('value').then(snap => {
-        const u = snap.val();
-        profName.innerText = u.username;
-        const d = new Date(u.createdAt);
-        profDate.innerText = `Account created on: ${d.getDate()}-${d.getMonth()+1}-${d.getFullYear()}`;
-      });
-      // User posts
-      db.ref('posts').orderByChild('uid').equalTo(uid).once('value').then(snap => {
-        userPostsDiv.innerHTML = '';
-        (Object.values(snap.val() || {}).reverse()).forEach(p => {
-          const c = document.createElement('div');
-          c.className = 'story-card';
-          c.innerHTML = `<h3>${p.title}</h3><p>${p.story}</p><span class="meta">${new Date(p.timestamp).toLocaleString()}</span>`;
-          userPostsDiv.appendChild(c);
-        });
-      });
-    }
-
-    // ——— Back to Feed ———
-    backBtn.onclick = () => showScreen('feed');
-  </script>
-
+  });
+}</script>
 </body>
 </html>
