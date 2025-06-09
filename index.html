@@ -4,79 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Ghost Stories Hub</title>
-  <style>/* 기본 세팅 */
-* { box-sizing:border-box; margin:0; padding:0; }
-body { font-family:sans-serif; background:#121212; color:#eee; }
-.hidden { display:none; }
-
-/* 헤더 */
-.main-header {
-  display:flex; justify-content:space-between; align-items:center;
-  padding:10px 20px; background:#1e1e1e; position:sticky; top:0;
-}
-.main-header h1 { font-size:1.8rem; }
-.header-controls .btn { margin-left:10px; }
-
-/* 버튼 디자인 */
-.btn {
-  background:#5e0d0d; color:#fff; border:none; padding:8px 14px;
-  border-radius:4px; cursor:pointer;
-}
-.btn.alt { background:#444; }
-
-/* FEED */
-#feed { padding:20px; }
-#open-form-btn { margin-bottom:20px; }
-#posts { display:flex; flex-direction:column; gap:16px; }
-.post-card {
-  background:#2e2e3a; border-radius:8px; padding:16px;
-}
-.post-card h3 { margin-bottom:8px; }
-.post-card p.meta {
-  margin-top:12px; font-size:0.9rem; color:#bbb;
-}
-.post-card p.meta span.username {
-  cursor:pointer; text-decoration:underline; color:#7de6ff;
-}
-
-/* MODAL 공통 */
-.modal {
-  position:fixed; top:0; left:0; width:100%; height:100%;
-  background:rgba(0,0,0,0.8); display:flex; align-items:center;
-  justify-content:center; padding:20px; z-index:100;
-}
-.modal-content {
-  background:#1e1e1e; padding:20px; border-radius:8px;
-  width:100%; max-width:400px;
-}
-.modal-content.wide { max-width:600px; }
-
-/* STORY FORM */
-#story-title, #story-body {
-  width:100%; margin-bottom:12px; padding:10px;
-  background:#222; border:1px solid #555; border-radius:4px;
-  color:#fff;
-}
-
-/* PROFILE */
-.profile-header { text-align:center; margin-bottom:16px; }
-.profile-header .avatar {
-  width:100px; height:100px; border-radius:50%;
-  border:4px solid #121212; margin-bottom:10px;
-}
-#badges img {
-  width:24px; margin:0 4px; vertical-align:middle;
-}
-
-/* ROLES MANAGEMENT */
-#users-list { display:flex; flex-direction:column; gap:12px; max-height:400px; overflow:auto; }
-.user-item {
-  display:flex; justify-content:space-between; align-items:center;
-  background:#2e2e3a; padding:10px; border-radius:6px;
-}
-.user-item .info { display:flex; align-items:center; gap:8px; }
-.user-item .info .username { font-weight:bold; }
-.user-item .actions button { margin-left:6px; }</style>
+  <link rel="stylesheet" href="style.css" />
   <!-- Firebase Compat SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
@@ -84,272 +12,38 @@ body { font-family:sans-serif; background:#121212; color:#eee; }
 </head>
 <body>
 
-  <!-- HEADER -->
-  <header class="main-header">
-    <h1>👻 Ghost Stories Hub</h1>
-    <div class="header-controls">
-      <button id="login-btn" class="btn">Sign in with Google</button>
-      <button id="logout-btn" class="btn hidden">Sign Out</button>
-      <button id="manage-roles-btn" class="btn hidden">Manage Roles</button>
-    </div>
-  </header>
+  <!-- LOGIN SCREEN -->
+  <div id="login-screen" class="screen">
+    <div class="bg-image"></div>
+    <button id="login-btn" class="btn">Sign in with Google</button>
+  </div>
 
-  <!-- FEED -->
-  <section id="feed" class="hidden">
-    <button id="open-form-btn" class="btn">Write a Story</button>
+  <!-- FEED SCREEN -->
+  <div id="feed-screen" class="screen hidden">
+    <header class="feed-header">
+      <img src="assets/images/Feed.png" alt="Feed" />
+    </header>
+
+    <div class="controls">
+      <button id="open-form-btn" class="btn">Write a Story</button>
+    </div>
+
     <div id="posts"></div>
-  </section>
+  </div>
 
   <!-- STORY MODAL -->
   <div id="story-modal" class="modal hidden">
     <div class="modal-content">
       <h2>Write a Story</h2>
       <input id="story-title" placeholder="Title" />
-      <textarea id="story-body" rows="4" placeholder="Your horror story..."></textarea>
-      <button id="post-btn" class="btn">Post</button>
-      <button id="close-form-btn" class="btn alt">Cancel</button>
-    </div>
-  </div>
-
-  <!-- PROFILE MODAL -->
-  <div id="profile-modal" class="modal hidden">
-    <div class="modal-content">
-      <div class="profile-header">
-        <img src="assets/images/profile.png" alt="Avatar" class="avatar"/>
-        <h2 id="profile-name"></h2>
-        <div id="badges"></div>
-        <p id="profile-date"></p>
+      <textarea id="story-body" rows="5" placeholder="Your horror story..."></textarea>
+      <div class="modal-actions">
+        <button id="post-btn" class="btn">Post</button>
+        <button id="close-form-btn" class="btn alt">Cancel</button>
       </div>
-      <div id="profile-posts"></div>
-      <button id="close-profile-btn" class="btn alt">Close</button>
     </div>
   </div>
 
-  <!-- ROLES MANAGEMENT MODAL -->
-  <div id="roles-modal" class="modal hidden">
-    <div class="modal-content wide">
-      <h2>Manage Roles</h2>
-      <div id="users-list"></div>
-      <button id="close-roles-btn" class="btn alt">Close</button>
-    </div>
-  </div>
-
-  <script>// — Firebase init —
-const firebaseConfig = {
-  apiKey: "AIzaSyAepf_M4EeW7QbXGKVc21Yb4nust240c4c",
-  authDomain: "ghost-stories-hub-e372e.firebaseapp.com",
-  databaseURL: "https://ghost-stories-hub-e372e-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "ghost-stories-hub-e372e",
-  storageBucket: "ghost-stories-hub-e372e.firebasestorage.app",
-  messagingSenderId: "387198854399",
-  appId: "1:387198854399:web:cc70ebb7d6a19cc15e18ca"
-};
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db   = firebase.database();
-
-// — DOM refs —
-const loginBtn       = document.getElementById('login-btn');
-const logoutBtn      = document.getElementById('logout-btn');
-const manageRolesBtn = document.getElementById('manage-roles-btn');
-
-const feedSection    = document.getElementById('feed');
-const postsEl        = document.getElementById('posts');
-const openFormBtn    = document.getElementById('open-form-btn');
-
-const storyModal     = document.getElementById('story-modal');
-const closeFormBtn   = document.getElementById('close-form-btn');
-const postBtn        = document.getElementById('post-btn');
-const storyTitleIn   = document.getElementById('story-title');
-const storyBodyIn    = document.getElementById('story-body');
-
-const profileModal   = document.getElementById('profile-modal');
-const profileName    = document.getElementById('profile-name');
-const profileDate    = document.getElementById('profile-date');
-const badgesEl       = document.getElementById('badges');
-const profilePostsEl = document.getElementById('profile-posts');
-const closeProfileBtn= document.getElementById('close-profile-btn');
-
-const rolesModal     = document.getElementById('roles-modal');
-const usersListEl    = document.getElementById('users-list');
-const closeRolesBtn  = document.getElementById('close-roles-btn');
-
-let currentUser = null;
-
-// — Auth listener —
-auth.onAuthStateChanged(u => {
-  if (u) {
-    currentUser = u;
-    initUIForUser(u);
-    listenFeed();
-  } else {
-    resetUI();
-  }
-});
-
-// — UI Setup —
-function initUIForUser(u) {
-  document.getElementById('login-btn').classList.add('hidden');
-  logoutBtn.classList.remove('hidden');
-  feedSection.classList.remove('hidden');
-  // show manageRoles only if owner or staff
-  getUserRole(u.uid).then(role => {
-    if (role === 'owner' || role === 'staff') {
-      manageRolesBtn.classList.remove('hidden');
-    }
-  });
-}
-
-// — Reset to login state —
-function resetUI() {
-  document.getElementById('login-btn').classList.remove('hidden');
-  logoutBtn.classList.add('hidden');
-  feedSection.classList.add('hidden');
-  manageRolesBtn.classList.add('hidden');
-}
-
-// — Sign in/out —
-loginBtn.onclick = () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
-logoutBtn.onclick= () => auth.signOut();
-
-// — Story modal toggles —
-openFormBtn.onclick   = () => storyModal.classList.remove('hidden');
-closeFormBtn.onclick  = () => storyModal.classList.add('hidden');
-
-// — Post story —
-postBtn.onclick = () => {
-  const title = storyTitleIn.value.trim();
-  const body  = storyBodyIn.value.trim();
-  if (!title || !body) return alert('Title & story required!');
-  db.ref('posts').push({
-    uid: currentUser.uid,
-    title, story: body,
-    timestamp: new Date().toISOString()
-  });
-  storyModal.classList.add('hidden');
-  storyTitleIn.value = ''; storyBodyIn.value = '';
-};
-
-// — Listen feed —
-function listenFeed() {
-  db.ref('posts').on('value', snap => {
-    postsEl.innerHTML = '';
-    const posts = Object.entries(snap.val() || {}).reverse();
-    posts.forEach(([id, p]) => {
-      const div = document.createElement('div');
-      div.className = 'post-card';
-      div.innerHTML = `
-        <h3>${p.title}</h3>
-        <p>${p.story}</p>
-        <p class="meta">
-          <span class="username" data-uid="${p.uid}">${p.username}</span>
-          · ${new Date(p.timestamp).toLocaleString()}
-        </p>`;
-      div.querySelector('.username').onclick = e => showProfile(e.target.dataset.uid);
-      postsEl.appendChild(div);
-    });
-    // save user info
-    posts.forEach(([,p]) => saveUserProfile(p.uid, p.username));
-  });
-}
-
-// — Save user profile & role if new —
-function saveUserProfile(uid, username) {
-  const userRef = db.ref('users/' + uid);
-  userRef.once('value').then(snap => {
-    if (!snap.exists()) {
-      userRef.set({ username, email: '', role: '' });
-    }
-  });
-}
-
-// — Get user role —
-function getUserRole(uid) {
-  return db.ref('users/' + uid + '/role').once('value')
-    .then(snap => {
-      let role = snap.val() || '';
-      // ensure owner
-      if (snap.val() === '' && uid === firebase.auth().currentUser.uid &&
-          firebase.auth().currentUser.email === 'samiulhaquerafsan@gmail.com') {
-        role = 'owner';
-        db.ref('users/' + uid + '/role').set('owner');
-      }
-      return role;
-    });
-}
-
-// — Show profile modal —
-function showProfile(uid) {
-  profileModal.classList.remove('hidden');
-  // load profile info
-  db.ref('users/' + uid).once('value').then(snap => {
-    const u = snap.val() || {};
-    profileName.innerText = u.username || 'Unknown';
-    const d = new Date(u.createdAt || Date.now());
-    profileDate.innerText = `Account: ${d.getDate()}-${d.getMonth()+1}-${d.getFullYear()}`;
-    // badges
-    badgesEl.innerHTML = '';
-    ['owner','staff','topWriter'].forEach(r => {
-      if (u.role === r || (r==='topWriter' && u.topWriter)) {
-        const img = document.createElement('img');
-        img.src = `assets/images/${r}badge.png`;
-        img.alt = r;
-        badgesEl.appendChild(img);
-      }
-    });
-  });
-  // load posts
-  profilePostsEl.innerHTML = '';
-  db.ref('posts').orderByChild('uid').equalTo(uid).once('value').then(snap => {
-    Object.values(snap.val()||{}).reverse().forEach(p => {
-      const d = document.createElement('div');
-      d.className = 'post-card';
-      d.innerHTML = `<h3>${p.title}</h3><p>${p.story}</p>`;
-      profilePostsEl.appendChild(d);
-    });
-  });
-}
-closeProfileBtn.onclick = () => profileModal.classList.add('hidden');
-
-// — Manage Roles —
-manageRolesBtn.onclick = () => {
-  rolesModal.classList.remove('hidden');
-  usersListEl.innerHTML = '';
-  db.ref('users').once('value').then(snap => {
-    Object.entries(snap.val()||{}).forEach(([uid,u]) => {
-      const item = document.createElement('div');
-      item.className = 'user-item';
-      item.innerHTML = `
-        <div class="info">
-          <span class="username">${u.username}</span>
-          <span class="current-role">(${u.role||'user'})</span>
-        </div>
-        <div class="actions"></div>`;
-      const actions = item.querySelector('.actions');
-      // owner can toggle staff
-      if (currentUser.email === 'samiulhaquerafsan@gmail.com' && uid !== currentUser.uid) {
-        const btn = document.createElement('button');
-        btn.innerText = u.role === 'staff' ? 'Unstaff' : 'Make Staff';
-        btn.onclick = () => {
-          db.ref('users/' + uid + '/role').set(u.role === 'staff' ? '' : 'staff')
-            .then(() => manageRolesBtn.click()); // refresh
-        };
-        actions.appendChild(btn);
-      }
-      // owner or staff can toggle topWriter
-      if ((currentUser.email === 'samiulhaquerafsan@gmail.com' || u.role === 'staff') && uid !== currentUser.uid) {
-        const btn2 = document.createElement('button');
-        btn2.innerText = u.topWriter ? 'Revoke TopWriter' : 'Make TopWriter';
-        btn2.onclick = () => {
-          db.ref('users/' + uid + '/topWriter').set(!u.topWriter)
-            .then(() => manageRolesBtn.click());
-        };
-        actions.appendChild(btn2);
-      }
-      usersListEl.appendChild(item);
-    });
-  });
-};
-closeRolesBtn.onclick = () => rolesModal.classList.add('hidden');</script>
+  <script src="app.js"></script>
 </body>
 </html>
