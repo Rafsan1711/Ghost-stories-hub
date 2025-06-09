@@ -2,48 +2,208 @@
 <html lang="bn">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>Ghost Stories Hub</title>
-  <link rel="stylesheet" href="style.css" />
-  <!-- Firebase Compat SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; font-family: sans-serif; }
+    body { background: #121212; color: #eee; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+    /* Mobile screen container */
+    #login-screen {
+      position: relative;
+      width: min(400px, 90vw);
+      aspect-ratio: 9/16;
+      background: url('assets/images/signin.png') center/cover no-repeat;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+    #login-btn {
+      padding: 12px 20px;
+      background: rgba(255,255,255,0.9);
+      color: #121212;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    /* Feed */
+    #app { display: none; width: 100%; max-width: 800px; margin: auto; }
+    .section {
+      background: #1e1e1e;
+      padding: 16px;
+      border-radius: 12px;
+      margin-bottom: 16px;
+    }
+    .section h1 { font-family: 'Creepster', cursive; font-size: 2rem; text-align: center; }
+    .section h2 { font-family: 'Creepster', cursive; font-size: 1rem; text-align: center; opacity: 0.7; margin-top: 4px; }
+    #posts { }
+    .post {
+      background: #2a2a2a;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+    .post .username {
+      font-weight: bold;
+      cursor: pointer;
+      margin-bottom: 6px;
+    }
+    /* Post a story button */
+    #post-story-btn {
+      display: block;
+      background: #333;
+      color: #eee;
+      border: none;
+      padding: 10px 16px;
+      margin: 0 auto 16px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    /* Modal */
+    #modal-overlay {
+      position: fixed; top:0; left:0; right:0; bottom:0;
+      background: rgba(0,0,0,0.7);
+      display: none; justify-content:center; align-items:center;
+    }
+    #story-modal {
+      background: #1f1f1f;
+      padding: 20px;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 400px;
+    }
+    #story-modal input, #story-modal textarea {
+      width: 100%; padding: 8px; margin-bottom: 12px;
+      border: none; border-radius: 6px; background: #2a2a2a; color: #eee;
+    }
+    #story-modal button {
+      padding: 8px 14px; border:none; border-radius:6px; cursor:pointer;
+      background: #444; color:#fff;
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Creepster&display=swap" rel="stylesheet">
 </head>
 <body>
-
-  <!-- LOGIN SCREEN -->
-  <div id="login-screen" class="screen">
-    <div class="bg-image"></div>
-    <button id="login-btn" class="btn">Sign in with Google</button>
+  <!-- Login screen -->
+  <div id="login-screen">
+    <button id="login-btn">Sign in with Google</button>
   </div>
-
-  <!-- FEED SCREEN -->
-  <div id="feed-screen" class="screen hidden">
-    <header class="feed-header">
-      <img src="assets/images/Feed.png" alt="Feed" />
-    </header>
-
-    <div class="controls">
-      <button id="open-form-btn" class="btn">Write a Story</button>
+  <!-- Main app -->
+  <div id="app">
+    <div class="section">
+      <h1>Ghost Story Hub</h1>
+      <h2>horror story platform</h2>
     </div>
-
+    <button id="post-story-btn">Post a story</button>
     <div id="posts"></div>
   </div>
 
-  <!-- STORY MODAL -->
-  <div id="story-modal" class="modal hidden">
-    <div class="modal-content">
-      <h2>Write a Story</h2>
-      <input id="story-title" placeholder="Title" />
-      <textarea id="story-body" rows="5" placeholder="Your horror story..."></textarea>
-      <div class="modal-actions">
-        <button id="post-btn" class="btn">Post</button>
-        <button id="close-form-btn" class="btn alt">Cancel</button>
-      </div>
+  <!-- Modal for posting -->
+  <div id="modal-overlay">
+    <div id="story-modal">
+      <h3 style="margin-bottom:10px;">New Story</h3>
+      <input type="text" id="story-title" placeholder="Title" />
+      <textarea id="story-text" rows="5" placeholder="Full story..."></textarea>
+      <button id="submit-story">Submit</button>
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <script>
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyAepf_M4EeW7QbXGKVc21Y4nust240c4c",
+      authDomain: "ghost-stories-hub-e372e.firebaseapp.com",
+      databaseURL: "https://ghost-stories-hub-e372e-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "ghost-stories-hub-e372e",
+      storageBucket: "ghost-stories-hub-e372e.firebasestorage.app",
+      messagingSenderId: "387198854399",
+      appId: "1:387198854399:web:cc70ebb7d6a19cc15e18ca"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    const loginScreen = document.getElementById('login-screen');
+    const loginBtn = document.getElementById('login-btn');
+    const appDiv = document.getElementById('app');
+    const postsDiv = document.getElementById('posts');
+    const postBtn = document.getElementById('post-story-btn');
+    const modalOverlay = document.getElementById('modal-overlay');
+    const submitStory = document.getElementById('submit-story');
+    const titleInput = document.getElementById('story-title');
+    const textInput = document.getElementById('story-text');
+
+    let currentUser = null;
+    let filterUser = null;
+
+    // Show/hide modal
+    postBtn.onclick = () => modalOverlay.style.display = 'flex';
+    modalOverlay.onclick = e => { if(e.target===modalOverlay) modalOverlay.style.display='none'; };
+
+    // Sign in
+    loginBtn.onclick = () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider);
+    };
+
+    // Auth state listener
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        currentUser = user;
+        loginScreen.style.display = 'none';
+        appDiv.style.display = 'block';
+        loadPosts();
+      } else {
+        loginScreen.style.display = 'flex';
+        appDiv.style.display = 'none';
+      }
+    });
+
+    // Load & render posts
+    function loadPosts() {
+      db.ref('posts').on('value', snapshot => {
+        postsDiv.innerHTML = '';
+        const data = snapshot.val() || {};
+        Object.entries(data).forEach(([id, post]) => {
+          if (filterUser && post.uid !== filterUser) return;
+          const div = document.createElement('div');
+          div.className = 'post';
+          const uname = document.createElement('div');
+          uname.className = 'username';
+          uname.textContent = post.name;
+          uname.onclick = () => {
+            filterUser = post.uid === filterUser ? null : post.uid;
+            loadPosts();
+          };
+          const t = document.createElement('h4');
+          t.textContent = post.title;
+          const b = document.createElement('p');
+          b.textContent = post.text;
+          div.append(uname, t, b);
+          postsDiv.append(div);
+        });
+      });
+    }
+
+    // Submit new story
+    submitStory.onclick = () => {
+      const title = titleInput.value.trim();
+      const text = textInput.value.trim();
+      if (!title||!text) return alert('Both title & story required!');
+      db.ref('posts').push({
+        uid: currentUser.uid,
+        name: currentUser.displayName || currentUser.email.split('@')[0],
+        title, text, createdAt: Date.now()
+      });
+      titleInput.value = '';
+      textInput.value = '';
+      modalOverlay.style.display = 'none';
+    };
+  </script>
 </body>
-</html>
+  </html>
