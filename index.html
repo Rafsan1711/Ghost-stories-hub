@@ -235,7 +235,7 @@ const firebaseConfig = {
       profileName.textContent = snap.val() || 'Unknown';
       profileBadges.innerHTML = '';
       const badges = await getBadges(uid);
-      if (badges.owner)     profileBadges.append(renderBadge('ownerbadge.png'));
+      if (badges.owner)     profileBadges.append(renderBadge('owner.png'));
       if (badges.staff)     profileBadges.append(renderBadge('staff.png'));
       if (badges.topWriter) profileBadges.append(renderBadge('topwriter.png'));
       profilePosts.innerHTML = '';
