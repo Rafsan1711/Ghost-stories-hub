@@ -108,6 +108,7 @@
       background: #444; color:#fff;
     }
     /* Comments modal */
+    #comments-overlay.modal-overlay { align-items: flex-start; padding-top: 40px; }
     #comments-modal {
       background: #1f1f1f;
       padding: 20px;
@@ -117,6 +118,11 @@
       max-height: 80vh;
       display: flex;
       flex-direction: column;
+      position: relative;
+    }
+    #comments-modal h3 {
+      text-align: center;
+      margin-bottom: 12px;
     }
     #comments-list {
       flex: 1;
@@ -128,6 +134,10 @@
       padding: 8px;
       border-radius: 6px;
       margin-bottom: 8px;
+    }
+    .comment-item .c-username {
+      font-weight: bold;
+      margin-bottom: 4px;
     }
     #new-comment {
       display: flex;
@@ -149,7 +159,12 @@
       color: #fff;
       cursor: pointer;
     }
-    /* Profile view badges (unchanged) */
+    #comments-close {
+      position: absolute;
+      top: 10px; right: 14px;
+      background: none; border:none; font-size:1.4rem; color:#ccc; cursor:pointer;
+    }
+    /* Profile view badges */
     #profile-badges {
       display: flex;
       flex-direction: column;
@@ -231,6 +246,7 @@
   <!-- Comments modal -->
   <div id="comments-overlay" class="modal-overlay">
     <div id="comments-modal">
+      <button id="comments-close">&times;</button>
       <h3>Comments</h3>
       <div id="comments-list"></div>
       <div id="new-comment">
@@ -241,49 +257,50 @@
   </div>
 
   <script>
-    // Firebase init (unchanged)
+    // Firebase init
     const firebaseConfig = {
-      apiKey: "AIzaSyAepf_M4EeW7QGKVc21Y4nust240c4c",
-      authDomain: "ghost-stories-hub-e372e.firebaseapp.com",
-      databaseURL: "https://ghost-stories-hub-e372e-default-rtdb.asia-southeast1.firebasedatabase.app",
-      projectId: "ghost-stories-hub-e372e",
-      storageBucket: "ghost-stories-hub-e372e.firebasestorage.app",
-      messagingSenderId: "387198854399",
-      appId: "1:387198854399:web:cc70ebb7d6a19cc15e18ca"
+     apiKey:    "AIzaSyDQDghMUXcjcLufG3xU94pUx-J0r9TUu6Q",
+      authDomain:"gconnect-7fe65.firebaseapp.com",
+      databaseURL:"https://gconnect-7fe65-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "gconnect-7fe65",
+      storageBucket:"gconnect-7fe65.appspot.com",
+      messagingSenderId:"484729292789",
+      appId:     "1:484729292789:web:8e5391b09d3581c90b02bc"
     };
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.database();
 
     // Elements
-    const loginScreen = document.getElementById('login-screen');
-    const loginBtn    = document.getElementById('login-btn');
-    const appDiv      = document.getElementById('app');
-    const postsDiv    = document.getElementById('posts');
-    const postBtn     = document.getElementById('post-story-btn');
-    const modalOverlay= document.getElementById('modal-overlay');
-    const submitStory = document.getElementById('submit-story');
-    const titleInput  = document.getElementById('story-title');
-    const textInput   = document.getElementById('story-text');
+    const loginScreen     = document.getElementById('login-screen');
+    const loginBtn        = document.getElementById('login-btn');
+    const appDiv          = document.getElementById('app');
+    const postsDiv        = document.getElementById('posts');
+    const postBtn         = document.getElementById('post-story-btn');
+    const modalOverlay    = document.getElementById('modal-overlay');
+    const submitStory     = document.getElementById('submit-story');
+    const titleInput      = document.getElementById('story-title');
+    const textInput       = document.getElementById('story-text');
 
     const commentsOverlay = document.getElementById('comments-overlay');
     const commentsList    = document.getElementById('comments-list');
     const commentInput    = document.getElementById('comment-input');
     const submitComment   = document.getElementById('submit-comment');
+    const commentsClose   = document.getElementById('comments-close');
 
-    const profileView = document.getElementById('profile-view');
-    const backBtn     = document.getElementById('back-btn');
-    const profileName = document.getElementById('profile-name');
-    const profileBadges = document.getElementById('profile-badges');
-    const profilePosts  = document.getElementById('profile-posts');
-    const menuBtn       = document.querySelector('.menu-btn');
-    const menuOptions   = document.getElementById('menu-options');
+    const profileView     = document.getElementById('profile-view');
+    const backBtn         = document.getElementById('back-btn');
+    const profileName     = document.getElementById('profile-name');
+    const profileBadges   = document.getElementById('profile-badges');
+    const profilePosts    = document.getElementById('profile-posts');
+    const menuBtn         = document.querySelector('.menu-btn');
+    const menuOptions     = document.getElementById('menu-options');
 
     let currentUser = null;
-    let viewingUid  = null;
     let activePostId = null;
+    let viewingUid = null;
 
-    // Badges helpers (unchanged)
+    // Badge helpers
     async function getBadges(uid) {
       const snap = await db.ref(`badges/${uid}`).once('value');
       const data = snap.val() || {};
@@ -305,7 +322,7 @@
       appDiv.style.display = 'block';
       loadPosts();
     }
-    // Show profile (unchanged)
+    // Show profile
     async function showProfile(uid) {
       viewingUid = uid;
       appDiv.style.display = 'none';
@@ -324,45 +341,46 @@
         div.className = 'post';
         const t = document.createElement('h4'); t.textContent = post.title;
         const b = document.createElement('p'); b.textContent = post.text;
-        div.append(t,b);
+        div.append(t, b);
         profilePosts.append(div);
       });
-      // menu logic unchanged...
+      // menu logic
       menuOptions.innerHTML = '';
       const meBadges = await getBadges(currentUser.uid);
       const tgtBadges = await getBadges(uid);
-      const canOpen = (meBadges.owner) || (meBadges.staff && !meBadges.owner);
-      menuBtn.style.display = uid!==currentUser.uid && canOpen ? 'block' : 'none';
-      menuBtn.onclick = () => menuOptions.style.display = menuOptions.style.display==='block'?'none':'block';
-      if (uid!==currentUser.uid && meBadges.owner) {
+      const canOpen = meBadges.owner || (meBadges.staff && !meBadges.owner);
+      menuBtn.style.display = (uid !== currentUser.uid && canOpen) ? 'block' : 'none';
+      menuBtn.onclick = () => {
+        menuOptions.style.display = menuOptions.style.display === 'block' ? 'none' : 'block';
+      };
+      if (uid !== currentUser.uid && meBadges.owner) {
         const btnS = document.createElement('button');
         btnS.textContent = tgtBadges.staff ? 'Remove from staff' : 'Make staff';
-        btnS.onclick = async ()=>{
+        btnS.onclick = async () => {
           await db.ref(`badges/${uid}/staff`).set(!tgtBadges.staff);
           showProfile(uid);
         };
         menuOptions.append(btnS);
         const btnT = document.createElement('button');
         btnT.textContent = tgtBadges.topWriter ? 'Remove from top writer' : 'Make top writer';
-        btnT.onclick = async ()=>{
+        btnT.onclick = async () => {
           await db.ref(`badges/${uid}/topWriter`).set(!tgtBadges.topWriter);
           showProfile(uid);
         };
         menuOptions.append(btnT);
-      } else if (uid!==currentUser.uid && meBadges.staff) {
+      } else if (uid !== currentUser.uid && meBadges.staff) {
         const btnT = document.createElement('button');
         btnT.textContent = tgtBadges.topWriter ? 'Remove from top writer' : 'Make top writer';
-        btnT.onclick = async ()=>{
+        btnT.onclick = async () => {
           await db.ref(`badges/${uid}/topWriter`).set(!tgtBadges.topWriter);
           showProfile(uid);
         };
         menuOptions.append(btnT);
       }
     }
-
     backBtn.onclick = () => showFeed();
 
-    // Auth
+    // Auth state
     auth.onAuthStateChanged(async user => {
       if (user) {
         currentUser = user;
@@ -376,7 +394,7 @@
     });
     loginBtn.onclick = () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
 
-    // Load feed posts + add comments & views
+    // Load posts
     function loadPosts() {
       db.ref('posts').on('value', snap => {
         postsDiv.innerHTML = '';
@@ -400,20 +418,19 @@
           viewsSpan.className = 'views';
           viewsSpan.textContent = `views: ${post.views || 0}`;
           footer.append(commentsBtn, viewsSpan);
-
           div.append(uname, t, b, footer);
           postsDiv.append(div);
         });
       });
     }
 
-    // Story modal logic (unchanged)
+    // Story modal
     postBtn.onclick = () => modalOverlay.style.display = 'flex';
-    modalOverlay.onclick = e => { if(e.target===modalOverlay) modalOverlay.style.display='none'; };
+    modalOverlay.onclick = e => { if (e.target === modalOverlay) modalOverlay.style.display = 'none'; };
     submitStory.onclick = () => {
       const title = titleInput.value.trim();
       const text  = textInput.value.trim();
-      if (!title||!text) return alert('Both title & story required!');
+      if (!title || !text) return alert('Both title & story required!');
       db.ref('posts').push({
         uid: currentUser.uid,
         name: currentUser.displayName || currentUser.email.split('@')[0],
@@ -429,27 +446,35 @@
       activePostId = postId;
       commentsList.innerHTML = '';
       commentsOverlay.style.display = 'flex';
-      // load comments
       db.ref(`comments/${postId}`).on('value', snap => {
         commentsList.innerHTML = '';
         const data = snap.val() || {};
         Object.values(data).forEach(c => {
           const ci = document.createElement('div');
           ci.className = 'comment-item';
-          ci.textContent = c.text;
+          const cu = document.createElement('div');
+          cu.className = 'c-username';
+          cu.textContent = c.name || 'Anonymous';
+          const ct = document.createElement('div');
+          ct.textContent = c.text;
+          ci.append(cu, ct);
           commentsList.append(ci);
         });
       });
     }
-    commentsOverlay.onclick = e => {
-      if (e.target === commentsOverlay) commentsOverlay.style.display = 'none';
-    };
+    commentsClose.onclick = () => { commentsOverlay.style.display = 'none'; commentInput.value = ''; };
+    commentsOverlay.onclick = e => { if (e.target === commentsOverlay) commentsOverlay.style.display = 'none'; };
+
     submitComment.onclick = () => {
       const txt = commentInput.value.trim();
       if (!txt) return;
-      db.ref(`comments/${activePostId}`).push({ text: txt, author: currentUser.uid, createdAt: Date.now() });
+      db.ref(`comments/${activePostId}`).push({
+        name: currentUser.displayName || currentUser.email.split('@')[0],
+        text: txt,
+        createdAt: Date.now()
+      });
       commentInput.value = '';
     };
   </script>
 </body>
-</html>
+  </html>
