@@ -90,8 +90,17 @@
     #profile-view .section {
       position: relative;
     }
+    /* UPDATED: badges center, vertical, larger */
+    #profile-badges {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
     #profile-badges img {
-      width: 32px; height: 32px; margin-right: 8px;
+      width: 100px;
+      height: auto;
     }
     /* 3-dot menu */
     .menu-btn {
@@ -163,13 +172,13 @@
   <script>
     // Firebase config & init
     const firebaseConfig = {
-      apiKey:    "AIzaSyDQDghMUXcjcLufG3xU94pUx-J0r9TUu6Q",
-      authDomain:"gconnect-7fe65.firebaseapp.com",
-      databaseURL:"https://gconnect-7fe65-default-rtdb.asia-southeast1.firebasedatabase.app",
-      projectId: "gconnect-7fe65",
-      storageBucket:"gconnect-7fe65.appspot.com",
-      messagingSenderId:"484729292789",
-      appId:     "1:484729292789:web:8e5391b09d3581c90b02bc"
+      apiKey: "AIzaSyAepf_M4EeW7QGKVc21Y4nust240c4c",
+      authDomain: "ghost-stories-hub-e372e.firebaseapp.com",
+      databaseURL: "https://ghost-stories-hub-e372e-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "ghost-stories-hub-e372e",
+      storageBucket: "ghost-stories-hub-e372e.firebasestorage.app",
+      messagingSenderId: "387198854399",
+      appId: "1:387198854399:web:cc70ebb7d6a19cc15e18ca"
     };
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
@@ -201,46 +210,37 @@
     async function getBadges(uid) {
       const snap = await db.ref(`badges/${uid}`).once('value');
       const data = snap.val() || {};
-      // ensure owner badge for specific email
       if (uid === currentUser.uid && currentUser.email === 'samiulhaquerafsan@gmail.com') {
         data.owner = true;
         data.staff = true;
       }
       return data;
     }
-    // Render a badge image
     function renderBadge(imgFile) {
       const img = document.createElement('img');
       img.src = imgFile;
       return img;
     }
 
-    // Show feed
     function showFeed() {
       profileView.style.display = 'none';
       appDiv.style.display = 'block';
       loadPosts();
     }
-    // Show profile
     async function showProfile(uid) {
       viewingUid = uid;
       appDiv.style.display = 'none';
       profileView.style.display = 'block';
-      // Name
       const snap = await db.ref(`users/${uid}/name`).once('value');
-      const name = snap.val() || 'Unknown';
-      profileName.textContent = name;
-      // Badges
+      profileName.textContent = snap.val() || 'Unknown';
       profileBadges.innerHTML = '';
       const badges = await getBadges(uid);
       if (badges.owner)     profileBadges.append(renderBadge('owner.png'));
       if (badges.staff)     profileBadges.append(renderBadge('staff.png'));
       if (badges.topWriter) profileBadges.append(renderBadge('topwriter.png'));
-      // Posts
       profilePosts.innerHTML = '';
       const postsSnap = await db.ref('posts').orderByChild('uid').equalTo(uid).once('value');
-      const posts = postsSnap.val() || {};
-      Object.values(posts).forEach(post => {
+      Object.values(postsSnap.val() || {}).forEach(post => {
         const div = document.createElement('div');
         div.className = 'post';
         const t = document.createElement('h4'); t.textContent = post.title;
@@ -248,56 +248,43 @@
         div.append(t,b);
         profilePosts.append(div);
       });
-      // Setup menu
       menuOptions.innerHTML = '';
-      menuBtn.style.display = (uid !== currentUser.uid && (await getBadges(currentUser.uid)).owner || (await getBadges(currentUser.uid)).staff) ? 'block' : 'none';
-      menuOptions.style.display = 'none';
-      menuBtn.onclick = () => menuOptions.style.display = menuOptions.style.display==='block'?'none':'block';
-
       const meBadges = await getBadges(currentUser.uid);
-      const targetBadges = await getBadges(uid);
-
-      if (uid !== currentUser.uid) {
-        // owner can make/remove staff & topWriter
-        if (meBadges.owner) {
-          // staff toggle
-          const btnStaff = document.createElement('button');
-          btnStaff.textContent = targetBadges.staff ? 'Remove from staff' : 'Make staff';
-          btnStaff.onclick = async () => {
-            await db.ref(`badges/${uid}/staff`).set(!targetBadges.staff);
-            showProfile(uid);
-          };
-          menuOptions.append(btnStaff);
-          // topWriter toggle
-          const btnTop = document.createElement('button');
-          btnTop.textContent = targetBadges.topWriter ? 'Remove from top writer' : 'Make top writer';
-          btnTop.onclick = async () => {
-            await db.ref(`badges/${uid}/topWriter`).set(!targetBadges.topWriter);
-            showProfile(uid);
-          };
-          menuOptions.append(btnTop);
-        }
-        // staff (non-owner) can only make/remove topWriter
-        else if (meBadges.staff) {
-          const btnTop = document.createElement('button');
-          btnTop.textContent = targetBadges.topWriter ? 'Remove from top writer' : 'Make top writer';
-          btnTop.onclick = async () => {
-            await db.ref(`badges/${uid}/topWriter`).set(!targetBadges.topWriter);
-            showProfile(uid);
-          };
-          menuOptions.append(btnTop);
-        }
+      const tgtBadges = await getBadges(uid);
+      const canOpen = (meBadges.owner) || (meBadges.staff && !meBadges.owner);
+      menuBtn.style.display = uid!==currentUser.uid && canOpen ? 'block' : 'none';
+      menuBtn.onclick = () => menuOptions.style.display = menuOptions.style.display==='block'?'none':'block';
+      if (uid!==currentUser.uid && meBadges.owner) {
+        const btnS = document.createElement('button');
+        btnS.textContent = tgtBadges.staff ? 'Remove from staff' : 'Make staff';
+        btnS.onclick = async ()=>{
+          await db.ref(`badges/${uid}/staff`).set(!tgtBadges.staff);
+          showProfile(uid);
+        };
+        menuOptions.append(btnS);
+        const btnT = document.createElement('button');
+        btnT.textContent = tgtBadges.topWriter ? 'Remove from top writer' : 'Make top writer';
+        btnT.onclick = async ()=>{
+          await db.ref(`badges/${uid}/topWriter`).set(!tgtBadges.topWriter);
+          showProfile(uid);
+        };
+        menuOptions.append(btnT);
+      } else if (uid!==currentUser.uid && meBadges.staff) {
+        const btnT = document.createElement('button');
+        btnT.textContent = tgtBadges.topWriter ? 'Remove from top writer' : 'Make top writer';
+        btnT.onclick = async ()=>{
+          await db.ref(`badges/${uid}/topWriter`).set(!tgtBadges.topWriter);
+          showProfile(uid);
+        };
+        menuOptions.append(btnT);
       }
     }
 
-    // Event: back to feed
     backBtn.onclick = () => showFeed();
 
-    // Auth & user data write
     auth.onAuthStateChanged(async user => {
       if (user) {
         currentUser = user;
-        // store user name for profiles
         await db.ref(`users/${user.uid}/name`).set(user.displayName || user.email.split('@')[0]);
         loginScreen.style.display = 'none';
         showFeed();
@@ -308,7 +295,6 @@
     });
     loginBtn.onclick = () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
 
-    // Load feed posts
     function loadPosts() {
       db.ref('posts').on('value', snap => {
         postsDiv.innerHTML = '';
@@ -328,7 +314,6 @@
       });
     }
 
-    // Post modal
     postBtn.onclick = () => modalOverlay.style.display = 'flex';
     modalOverlay.onclick = e => { if(e.target===modalOverlay) modalOverlay.style.display='none'; };
 
