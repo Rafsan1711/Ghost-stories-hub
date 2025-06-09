@@ -293,8 +293,11 @@ const firebaseConfig = {
         appDiv.style.display = profileView.style.display = 'none';
       }
     });
-    loginBtn.onclick = () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
-
+    loginBtn.onclick = () => {
+  auth
+    .setPersistence(firebase.auth.Auth.Persistence.LOCAL)  //⬅️ persist to localStorage
+    .then(() => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()));
+};
     function loadPosts() {
       db.ref('posts').on('value', snap => {
         postsDiv.innerHTML = '';
