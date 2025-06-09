@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ghost Stories Hub</title>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js"></script>
+  <style>
+    body {
+      margin: 0; font-family: sans-serif;
+      background: #121212; color: #eee;
+    }
+    .hidden { display: none; }
+    .center { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    button { cursor: pointer; border: none; border-radius: 5px; padding: 8px 16px; }
+    /* Login Screen */
+    #login-screen { height: 100vh; }
+    #login-screen h1 { font-size: 2.5rem; margin-bottom: 20px; }
+    #login-btn { background: #4285F4; color: #fff; }
+    /* Feed */
+    #feed { max-width: 600px; margin: auto; padding: 10px; }
+    #hub-title { text-align: center; font-size: 2rem; color: #ff5e5e; margin: 20px 0; }
+    #write-btn { background: #5e0d0d; color: #fff; margin-bottom: 10px; }
+    #story-form { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+    #story-form input, #story-form textarea {
+      background: #222; color: #fff; border: 1px solid #555; border-radius: 5px;
+      padding: 8px; width: 100%;
+    }
+    #story-form button { background: #7d1e1e; color: #fff; }
+    .story-card {
+      background: #2e2e3a; /* সব পোস্টের জন্য একই রঙ */
+      border-radius: 8px; padding: 15px; margin-bottom: 15px;
+    }
+    .story-card h3 { margin: 0 0 8px; }
+    .meta { font-size: 0.8rem; color: #bbb; }
+    .clickable { color: #7de6ff; cursor: pointer; text-decoration: underline; }
+    /* Profile */
+    #profile {
+      max-width: 600px; margin: auto; padding: 10px;
+    }
+    .profile-header {
+      position: relative; text-align: center; padding-top: 60px;
+    }
+    .profile-bg {
+      height: 150px; background: #5e0d0d;
+      border-bottom-left-radius: 10px; border-bottom-right-radius: 10px;
+    }
+    .profile-pic {
+      width: 120px; height: 120px; border-radius: 50%;
+      position: absolute; top: 90px; left: 50%; transform: translateX(-50%);
+      border: 5px solid #121212;
+    }
+    .profile-header h2 { margin-top: 70px; }
+    .profile-header p { margin: 5px 0 15px; font-size: 0.9rem; color: #ccc; }
+    #back-btn { background: #444; color: #fff; }
+  </style>
+</head>
+<body>
+  <!-- 로그인 -->
+  <div id="login-screen" class="center">
+    <h1>Ghost Stories Hub</h1>
+    <button id="login-btn">Sign in with Google</button>
+  </div>
+
+  <!-- ফিড -->
+  <div id="feed" class="hidden">
+    <h1 id="hub-title">👻 Ghost Stories Hub 👻</h1>
+    <button id="write-btn">Write a Story</button>
+    <div id="story-form" class="hidden">
+      <input type="text" id="title" placeholder="Title" />
+      <textarea id="body" rows="4" placeholder="Your horror story..."></textarea>
+      <button id="post-btn">Post Story</button>
+    </div>
+    <div id="posts"></div>
+  </div>
+
+  <!-- প্রোফাইল -->
+  <div id="profile" class="hidden">
+    <div class="profile-header">
+      <div class="profile-bg"></div>
+      <img src="profile.png" class="profile-pic" alt="Profile Pic"/>
+      <h2 id="prof-name"></h2>
+      <p id="prof-date"></p>
+      <button id="back-btn">Back to Feed</button>
+    </div>
+    <div id="user-posts" style="margin-top:20px;"></div>
+  </div>
+
+  <script>
+    // 🚀 Firebase init
+    const firebaseConfig = {
+      apiKey: 'YOUR_API_KEY',
+      authDomain: 'YOUR_AUTH_DOMAIN',
+      databaseURL: 'YOUR_DATABASE_URL',
+      projectId: 'YOUR_PROJECT_ID',
+      appId: 'YOUR_APP_ID'
+    };
+    const app = firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    // DOM Elements
+    const loginScreen = document.getElementById('login-screen');
+    const loginBtn    = document.getElementById('login-btn');
+    const feed        = document.getElementById('feed');
+    const writeBtn    = document.getElementById('write-btn');
+    const formDiv     = document.getElementById('story-form');
+    const postBtn     = document.getElementById('post-btn');
+    const postsDiv    = document.getElementById('posts');
+    const profileDiv  = document.getElementById('profile');
+    const backBtn     = document.getElementById('back-btn');
+    const profName    = document.getElementById('prof-name');
+    const profDate    = document.getElementById('prof-date');
+    const userPostsDiv= document.getElementById('user-posts');
+
+    let currentUser = null;
+
+    // Sign in
+    loginBtn.onclick = () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider);
+    };
+
+    // Auth state listener
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        currentUser = user;
+        showFeed();
+        // সেভ user info
+        db.ref('users/' + user.uid).set({
+          username: user.displayName,
+          createdAt: user.metadata.creationTime
+        });
+        loadFeed();
+      } else {
+        showLogin();
+      }
+    });
+
+    function showLogin(){
+      loginScreen.classList.remove('hidden');
+      feed.classList.add('hidden');
+      profileDiv.classList.add('hidden');
+    }
+    function showFeed(){
+      loginScreen.classList.add('hidden');
+      feed.classList.remove('hidden');
+      profileDiv.classList.add('hidden');
+    }
+    function showProfile(){
+      loginScreen.classList.add('hidden');
+      feed.classList.add('hidden');
+      profileDiv.classList.remove('hidden');
+    }
+
+    // Toggle form
+    writeBtn.onclick = () => formDiv.classList.toggle('hidden');
+
+    // Post story
+    postBtn.onclick = () => {
+      const title = document.getElementById('title').value.trim();
+      const body  = document.getElementById('body').value.trim();
+      if (!title || !body) return alert('Title & story both required!');
+      const newRef = db.ref('posts').push();
+      newRef.set({
+        uid: currentUser.uid,
+        username: currentUser.displayName,
+        title, story: body,
+        timestamp: new Date().toISOString()
+      });
+      document.getElementById('title').value = '';
+      document.getElementById('body').value = '';
+      formDiv.classList.add('hidden');
+    };
+
+    // Load feed
+    function loadFeed(){
+      db.ref('posts').on('value', snap => {
+        const data = snap.val() || {};
+        const arr = Object.entries(data).map(([id,v])=>({id,...v}));
+        // randomize
+        arr.sort(()=>0.5 - Math.random());
+        postsDiv.innerHTML = '';
+        arr.forEach(post => {
+          const card = document.createElement('div');
+          card.className = 'story-card';
+          card.innerHTML = `
+            <h3>${post.title}</h3>
+            <p>${post.story}</p>
+            <p class="meta">
+              <span class="clickable" data-uid="${post.uid}">👤 ${post.username}</span>
+              · ${new Date(post.timestamp).toLocaleString()}
+            </p>`;
+          // profile link
+          card.querySelector('.clickable').onclick = e => showUserProfile(e.target.dataset.uid);
+          postsDiv.appendChild(card);
+        });
+      });
+    }
+
+    // Show profile
+    function showUserProfile(uid){
+      showProfile();
+      // load user info
+      db.ref('users/' + uid).once('value').then(snap => {
+        const u = snap.val() || {};
+        profName.innerText = u.username || 'Unknown';
+        const d = new Date(u.createdAt);
+        profDate.innerText = `Account created on: ${d.getDate()}-${d.getMonth()+1}-${d.getFullYear()}`;
+      });
+      // load user's posts
+      db.ref('posts').orderByChild('uid').equalTo(uid).once('value').then(snap=>{
+        const data = snap.val()||{};
+        userPostsDiv.innerHTML = '';
+        Object.values(data).reverse().forEach(p=>{
+          const c = document.createElement('div');
+          c.className = 'story-card';
+          c.innerHTML = `<h3>${p.title}</h3><p>${p.story}</p><span class="meta">${new Date(p.timestamp).toLocaleString()}</span>`;
+          userPostsDiv.appendChild(c);
+        });
+      });
+    }
+
+    backBtn.onclick = showFeed;
+  </script>
+</body>
+  </html>
