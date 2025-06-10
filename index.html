@@ -7,7 +7,6 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
- <link rel="icon" type="image/png" href="favicon.png">
   <style>
     * { margin:0; padding:0; box-sizing:border-box; font-family: sans-serif; }
     body { background: #121212; color: #eee; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; padding: 20px; }
@@ -174,7 +173,7 @@
       margin-top: 10px;
     }
     #profile-badges img {
-      width: 350px;
+      width: 100px;
       height: auto;
     }
     /* 3-dot menu */
@@ -260,13 +259,13 @@
   <script>
     // Firebase init
     const firebaseConfig = {
-     apiKey:    "AIzaSyDQDghMUXcjcLufG3xU94pUx-J0r9TUu6Q",
-      authDomain:"gconnect-7fe65.firebaseapp.com",
-      databaseURL:"https://gconnect-7fe65-default-rtdb.asia-southeast1.firebasedatabase.app",
-      projectId: "gconnect-7fe65",
-      storageBucket:"gconnect-7fe65.appspot.com",
-      messagingSenderId:"484729292789",
-      appId:     "1:484729292789:web:8e5391b09d3581c90b02bc"
+      apiKey: "AIzaSyAepf_M4EeW7QGKVc21Y4nust240c4c",
+      authDomain: "ghost-stories-hub-e372e.firebaseapp.com",
+      databaseURL: "https://ghost-stories-hub-e372e-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "ghost-stories-hub-e372e",
+      storageBucket: "ghost-stories-hub-e372e.firebasestorage.app",
+      messagingSenderId: "387198854399",
+      appId: "1:387198854399:web:cc70ebb7d6a19cc15e18ca"
     };
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
@@ -323,6 +322,7 @@
       appDiv.style.display = 'block';
       loadPosts();
     }
+
     // Show profile
     async function showProfile(uid) {
       viewingUid = uid;
@@ -345,7 +345,7 @@
         div.append(t, b);
         profilePosts.append(div);
       });
-      // menu logic
+
       menuOptions.innerHTML = '';
       const meBadges = await getBadges(currentUser.uid);
       const tgtBadges = await getBadges(uid);
@@ -379,6 +379,7 @@
         menuOptions.append(btnT);
       }
     }
+
     backBtn.onclick = () => showFeed();
 
     // Auth state
@@ -395,7 +396,7 @@
     });
     loginBtn.onclick = () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
 
-    // Load posts
+    // Load posts and increment views
     function loadPosts() {
       db.ref('posts').on('value', snap => {
         postsDiv.innerHTML = '';
@@ -403,24 +404,38 @@
         Object.entries(data).forEach(([id, post]) => {
           const div = document.createElement('div');
           div.className = 'post';
+
           const uname = document.createElement('div');
           uname.className = 'username';
           uname.textContent = post.name;
           uname.onclick = () => showProfile(post.uid);
+
           const t = document.createElement('h4'); t.textContent = post.title;
           const b = document.createElement('p'); b.textContent = post.text;
+
           // footer
           const footer = document.createElement('div');
           footer.className = 'post-footer';
+
           const commentsBtn = document.createElement('button');
           commentsBtn.textContent = 'Comments';
           commentsBtn.onclick = () => openComments(id);
+
           const viewsSpan = document.createElement('div');
           viewsSpan.className = 'views';
-          viewsSpan.textContent = `views: ${post.views || 0}`;
+          viewsSpan.textContent = 'views: …';
+
           footer.append(commentsBtn, viewsSpan);
           div.append(uname, t, b, footer);
           postsDiv.append(div);
+
+          // increment views counter in DB and then update
+          const viewsRef = db.ref(`posts/${id}/views`);
+          viewsRef.transaction(curr => (curr || 0) + 1)
+            .then(result => {
+              const newCount = result.snapshot.val();
+              viewsSpan.textContent = `views: ${newCount}`;
+            });
         });
       });
     }
@@ -465,7 +480,6 @@
     }
     commentsClose.onclick = () => { commentsOverlay.style.display = 'none'; commentInput.value = ''; };
     commentsOverlay.onclick = e => { if (e.target === commentsOverlay) commentsOverlay.style.display = 'none'; };
-
     submitComment.onclick = () => {
       const txt = commentInput.value.trim();
       if (!txt) return;
@@ -478,4 +492,4 @@
     };
   </script>
 </body>
-  </html>
+</html>
