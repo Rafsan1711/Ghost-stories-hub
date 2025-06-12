@@ -38,10 +38,23 @@
       padding: 16px;
       border-radius: 12px;
       margin-bottom: 16px;
+    }
+    /* Header layout: logout left, title center, notification right */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
       position: relative;
     }
-    .section h1 { font-family: 'Creepster', cursive; font-size: 2rem; text-align: center; }
-    .section h2 { font-family: 'Creepster', cursive; font-size: 1rem; text-align: center; opacity: 0.7; margin-top: 4px; }
+    .header .title-container {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      width: calc(100% - 160px); /* leave space for buttons */
+    }
+    .header h1 { font-family: 'Creepster', cursive; font-size: 2.5rem; }
+    .header h2 { font-family: 'Creepster', cursive; font-size: 1.25rem; opacity: 0.9; margin-top: 4px; }
     #posts, #profile-posts { }
     .post {
       background: #2a2a2a;
@@ -89,16 +102,19 @@
     }
     /* Notification & Logout button */
     #notification-btn, #logout-btn {
-      position: absolute;
-      top: 16px;
       background: none;
       border: none;
       cursor: pointer;
       color: #ccc;
       font-size: 1.4rem;
     }
-    #notification-btn { right: 56px; }
-    #logout-btn { right: 16px; }
+    #logout-btn {
+      background: #1976d2;
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 1rem;
+    }
     /* Modal overlay common */
     .modal-overlay {
       position: fixed; top:0; left:0; right:0; bottom:0;
@@ -260,16 +276,18 @@
   <div id="login-screen">
     <button id="login-btn">Sign in with Google</button>
   </div>  <!-- Main feed -->  <div id="app">
-    <div class="section">
-      <h1>Ghost Story Hub</h1>
-      <h2>horror story platform</h2>
+    <div class="section header">
+      <button id="logout-btn" title="Logout">Logout</button>
+      <div class="title-container">
+        <h1>Ghost Story Hub</h1>
+        <h2>horror story platform</h2>
+      </div>
       <button id="notification-btn" title="Notifications">
         <!-- Heroicons bell -->
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
         </svg>
       </button>
-      <button id="logout-btn" title="Logout">Logout</button>
     </div>
     <button id="post-story-btn">Post a story</button>
     <div id="posts"></div>
@@ -455,7 +473,6 @@
       db.ref('posts').on('value', snap => {
         postsDiv.innerHTML = '';
         const data = snap.val() || {};
-        // Sort by createdAt descending
         const entries = Object.entries(data).sort((a,b) => b[1].createdAt - a[1].createdAt);
         entries.forEach(([id, post]) => {
           const div = document.createElement('div');
@@ -466,19 +483,14 @@
           uname.onclick = () => showProfile(post.uid);
           const t = document.createElement('h4'); t.textContent = post.title;
           const b = document.createElement('p'); b.textContent = post.text;
-          // footer
           const footer = document.createElement('div');
           footer.className = 'post-footer';
-          // Comments button
           const commentsBtn = document.createElement('button');
           commentsBtn.textContent = 'Comments';
           commentsBtn.onclick = () => openComments(id, post.uid);
-          // Like button and count
           const likeBtn = document.createElement('button');
           likeBtn.className = 'like-btn';
-          // Heroicons heart
           likeBtn.innerHTML = `<svg xmlns=\"http://www.w3.org/2000/svg\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\" width=\"20\" height=\"20\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 21.364l-7.682-7.682a4.5 4.5 0 010-6.364z\"/></svg> <span class=\"like-count\">0</span>`;
-          // Initialize like state
           db.ref(`likes/${id}`).once('value').then(snapLikes => {
             const likesObj = snapLikes.val() || {};
             const count = Object.keys(likesObj).length;
@@ -492,19 +504,15 @@
             const likeRef = db.ref(`likes/${id}/${currentUser.uid}`);
             likeRef.once('value').then(snapLike => {
               if (snapLike.exists()) {
-                // Unlike
                 likeRef.remove();
                 likeBtn.classList.remove('active');
-                // Decrement count
                 const span = likeBtn.querySelector('.like-count');
                 span.textContent = parseInt(span.textContent) - 1;
               } else {
-                // Like
                 likeRef.set(true);
                 likeBtn.classList.add('active');
                 const span = likeBtn.querySelector('.like-count');
                 span.textContent = parseInt(span.textContent) + 1;
-                // Send notification
                 if (post.uid !== currentUser.uid) {
                   db.ref(`notifications/${post.uid}`).push({
                     type: 'like',
@@ -517,7 +525,6 @@
               }
             });
           };
-          const footerRight = document.createElement('div');
           footer.append(commentsBtn, likeBtn);
           div.append(uname, t, b, footer);
           postsDiv.append(div);
@@ -547,7 +554,6 @@
       activePostId = postId;
       commentsList.innerHTML = '';
       commentsOverlay.style.display = 'flex';
-      // Increment views properly when viewing comments (considered as viewing post detail)
       db.ref(`posts/${postId}/views`).transaction(v => (v || 0) + 1);
       db.ref(`comments/${postId}`).on('value', snap => {
         commentsList.innerHTML = '';
@@ -576,7 +582,6 @@
         text: txt,
         createdAt: Date.now()
       });
-      // Send notification
       db.ref(`posts/${activePostId}/uid`).once('value').then(snap => {
         const ownerUid = snap.val();
         if (ownerUid && ownerUid !== currentUser.uid) {
@@ -598,7 +603,7 @@
       if (!currentUser) return;
       db.ref(`notifications/${currentUser.uid}`).on('value', snap => {
         const data = snap.val() || {};
-        // update badge or indicator if desired
+        // Could show badge indicator
       });
     }
     notificationBtn.onclick = () => {
@@ -612,18 +617,17 @@
           ni.className = 'notification-item';
           let text = '';
           if (n.type === 'like') {
-            text = `${n.fromName} liked your post.`;
+            text = `এই৷ ইউজার ${n.fromName} তোমার এই পোস্টে লাইক করেছে, অনেকটা ফেসবুক নোটিফিকেশনের মতো।`;
           } else if (n.type === 'comment') {
-            text = `${n.fromName} commented: "${n.text}"`;
+            text = `এই৷ ইউজার ${n.fromName} তোমার এই পোস্টে কমেন্ট করেছে: "${n.text}", অনেকটা ফেসবুক নোটিফিকেশনের মতো।`;
           }
           ni.textContent = text;
           notificationList.append(ni);
         });
-        // Optionally clear notifications after showing
         db.ref(`notifications/${currentUser.uid}`).remove();
       });
     };
     notificationClose.onclick = () => { notificationOverlay.style.display = 'none'; };
     notificationOverlay.onclick = e => { if (e.target === notificationOverlay) notificationOverlay.style.display = 'none'; };
   </script></body>
-                                          </html>
+</html>
