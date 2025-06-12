@@ -19,7 +19,7 @@
       min-height: 100vh;
       padding: 20px;
     }
-    /* Mobile-screen container: 높이 বাড়ানো */
+    /* Mobile-screen container */
     #login-screen {
       position: relative;
       width: min(400px, 90vw);
@@ -52,8 +52,9 @@
       padding: 16px;
       border-radius: 12px;
       margin-bottom: 16px;
+      position: relative;
     }
-    /* Header layout: column with title, then buttons, then subtitle */
+    /* Header layout: column with title, subtitle, then buttons */
     .header {
       display: flex;
       flex-direction: column;
@@ -66,21 +67,35 @@
       text-align: center;
       margin-bottom: 8px;
     }
-    .header-buttons {
-      display: flex;
-      gap: 16px;
-      margin-bottom: 8px; /* subtitle-এর আগে স্পেসিং */
-    }
-    .header-buttons button {
-      /*Logout এবং notification বাটনের স্টাইল দেয়া হবে পৃথক আইডি অনুযায়ী*/
-    }
     .header h2 {
       font-family: 'Creepster', cursive;
       font-size: 1.25rem;
       text-align: center;
       opacity: 0.9;
       margin-top: 0;
+      margin-bottom: 12px;
+    }
+    .header-buttons {
+      display: flex;
+      gap: 16px;
+      margin-top: 0;
       margin-bottom: 16px;
+    }
+    #logout-btn {
+      background: #1976d2;
+      color: #fff;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    #notification-btn {
+      background: none;
+      color: #ccc;
+      padding: 6px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
     }
     #posts, #profile-posts { }
     .post {
@@ -94,6 +109,12 @@
       font-weight: bold;
       cursor: pointer;
       margin-bottom: 6px;
+    }
+    .post h3 {
+      margin: 0 0 6px 0;
+    }
+    .post p {
+      margin: 0;
     }
     /* Post footer: comments & likes */
     .post-footer {
@@ -125,23 +146,6 @@
       padding: 10px 16px;
       margin: 0 auto 16px;
       border-radius: 8px;
-      cursor: pointer;
-    }
-    /* Notification & Logout button styling */
-    #logout-btn {
-      background: #1976d2;
-      color: #fff;
-      padding: 6px 12px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    #notification-btn {
-      background: none;
-      color: #ccc;
-      padding: 6px;
-      border: none;
-      border-radius: 6px;
       cursor: pointer;
     }
     /* Modal overlay common */
@@ -198,6 +202,7 @@
     .comment-item .c-username {
       font-weight: bold;
       margin-bottom: 4px;
+      cursor: pointer;
     }
     #new-comment {
       display: flex;
@@ -253,6 +258,10 @@
       margin-bottom: 8px;
       color: #eee;
       font-size: 0.9rem;
+    }
+    .notification-item .from-username {
+      font-weight: bold;
+      cursor: pointer;
     }
     #notification-close {
       position: absolute;
@@ -310,6 +319,7 @@
   <div id="app">
     <div class="section header">
       <h1>Ghost Story Hub</h1>
+      <h2>horror story platform</h2>
       <div class="header-buttons">
         <button id="logout-btn" title="Logout">Logout</button>
         <button id="notification-btn" title="Notifications">
@@ -324,7 +334,6 @@
           </svg>
         </button>
       </div>
-      <h2>horror story platform</h2>
     </div>
     <button id="post-story-btn">Post a story</button>
     <div id="posts"></div>
@@ -418,6 +427,7 @@
       if (user) {
         loginScreen.style.display = 'none';
         appDiv.style.display = 'block';
+        profileView.style.display = 'none';
         loadPosts();
         loadNotifications();
       } else {
@@ -459,8 +469,12 @@
 
     // Render a post element
     function renderPost(post, container) {
+      const user = auth.currentUser;
       const div = document.createElement('div');
       div.classList.add('post');
+      div.dataset.postId = post.id;
+
+      // Username
       const uname = document.createElement('div');
       uname.classList.add('username');
       uname.textContent = post.username || 'Unknown';
@@ -469,11 +483,12 @@
       });
       div.appendChild(uname);
 
+      // Title
       const titleEl = document.createElement('h3');
       titleEl.textContent = post.title;
-      titleEl.style.marginBottom = '6px';
       div.appendChild(titleEl);
 
+      // Text
       const textEl = document.createElement('p');
       textEl.textContent = post.text;
       div.appendChild(textEl);
@@ -483,15 +498,61 @@
       footer.classList.add('post-footer');
       // Like button
       const likeBtn = document.createElement('button');
+      likeBtn.classList.add('like-btn');
       likeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" 
                    viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
                    d="M5 15l7-7 7 7" /></svg> Like`;
-      likeBtn.classList.add('like-btn');
+      // Check if current user already liked
+      if (user) {
+        db.ref(`likes/${post.id}/${user.uid}`).once('value').then(snap => {
+          if (snap.exists()) {
+            likeBtn.classList.add('active');
+            likeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" 
+                     viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                     d="M5 15l7-7 7 7" /></svg> Unlike`;
+          }
+        });
+      }
       likeBtn.addEventListener('click', () => {
-        // Implement like logic…
+        if (!user) return;
+        const likeRef = db.ref(`likes/${post.id}/${user.uid}`);
+        likeRef.once('value').then(snap => {
+          if (snap.exists()) {
+            // Already liked: unlike
+            likeRef.remove();
+            likeBtn.classList.remove('active');
+            likeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" 
+                         viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                         d="M5 15l7-7 7 7" /></svg> Like`;
+          } else {
+            // Add like
+            likeRef.set(true).then(() => {
+              likeBtn.classList.add('active');
+              likeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" 
+                           viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                           d="M5 15l7-7 7 7" /></svg> Unlike`;
+              // Send notification to post owner if not self
+              if (post.userId && user.uid !== post.userId) {
+                const notifRef = db.ref(`notifications/${post.userId}`).push();
+                notifRef.set({
+                  type: 'like',
+                  fromUserId: user.uid,
+                  fromUsername: user.displayName,
+                  postId: post.id,
+                  postTitle: post.title,
+                  timestamp: Date.now()
+                });
+              }
+            });
+          }
+        });
       });
       footer.appendChild(likeBtn);
+
       // Comment button
       const commentBtn = document.createElement('button');
       commentBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" 
@@ -504,6 +565,7 @@
       footer.appendChild(commentBtn);
 
       div.appendChild(footer);
+      // Prepend so newest appear on top
       container.prepend(div);
     }
 
@@ -550,6 +612,9 @@
           const uel = document.createElement('div');
           uel.classList.add('c-username');
           uel.textContent = c.username;
+          uel.addEventListener('click', () => {
+            openProfile(c.userId, c.username);
+          });
           const tel = document.createElement('div');
           tel.textContent = c.text;
           item.appendChild(uel);
@@ -560,7 +625,7 @@
     }
     commentsClose.addEventListener('click', () => {
       commentsOverlay.style.display = 'none';
-      // detach listener if needed
+      // detach listener if desired
     });
     submitComment.addEventListener('click', () => {
       const text = commentInput.value.trim();
@@ -582,8 +647,7 @@
     function loadNotifications() {
       const user = auth.currentUser;
       if (!user) return;
-      // উদাহরণ: আপনি এখানে Firebase থেকে নোটিফিকেশন লোড করতে পারেন
-      // এখানে ডামি লিস্ট দেখানো হলো
+      // Load notifications for this user
       notificationList.innerHTML = '';
       db.ref(`notifications/${user.uid}`).on('value', snap => {
         notificationList.innerHTML = '';
@@ -591,7 +655,28 @@
           const note = child.val();
           const item = document.createElement('div');
           item.classList.add('notification-item');
-          item.textContent = note.text;
+          // Construct message based on type; for now only 'like'
+          if (note.type === 'like') {
+            // e.g., “Alice liked your post: My Horror Night”
+            const usernameSpan = document.createElement('span');
+            usernameSpan.classList.add('from-username');
+            usernameSpan.textContent = note.fromUsername;
+            usernameSpan.addEventListener('click', () => {
+              openProfile(note.fromUserId, note.fromUsername);
+            });
+            // Text node parts
+            const textBefore = document.createTextNode(' liked your post: ');
+            const postTitleSpan = document.createElement('span');
+            postTitleSpan.textContent = note.postTitle;
+            postTitleSpan.style.fontStyle = 'italic';
+            // Assemble
+            item.appendChild(usernameSpan);
+            item.appendChild(textBefore);
+            item.appendChild(postTitleSpan);
+          } else {
+            // অন্য টাইপের নোটিফিকেশন হ্যান্ডেল করতে চাইলে এখানে যোগ করুন
+            item.textContent = 'New notification';
+          }
           notificationList.appendChild(item);
         });
       });
@@ -623,8 +708,14 @@
       container.innerHTML = '';
       db.ref('posts').orderByChild('userId').equalTo(userId).on('value', snap => {
         container.innerHTML = '';
+        const posts = [];
         snap.forEach(child => {
-          renderPost(child.val(), container);
+          posts.push({ id: child.key, ...child.val() });
+        });
+        // Sort if needed by timestamp
+        posts.sort((a,b) => a.timestamp - b.timestamp);
+        posts.forEach(post => {
+          renderPost(post, container);
         });
       });
     }
@@ -640,4 +731,4 @@
     }
   </script>
 </body>
-          </html>
+  </html>
