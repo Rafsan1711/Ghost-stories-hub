@@ -39,22 +39,30 @@
       border-radius: 12px;
       margin-bottom: 16px;
     }
-    /* Header layout: logout left, title center, notification right */
+    /* Header layout: column with title, subtitle, then buttons */
     .header {
       display: flex;
+      flex-direction: column;
       align-items: center;
-      justify-content: space-between;
-      position: relative;
+      padding: 24px 16px;
     }
-    .header .title-container {
-      position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
+    .header h1 {
+      font-family: 'Creepster', cursive;
+      font-size: 2.5rem;
       text-align: center;
-      width: calc(100% - 160px); /* leave space for buttons */
+      margin-bottom: 8px;
     }
-    .header h1 { font-family: 'Creepster', cursive; font-size: 2.5rem; }
-    .header h2 { font-family: 'Creepster', cursive; font-size: 1.25rem; opacity: 0.9; margin-top: 4px; }
+    .header h2 {
+      font-family: 'Creepster', cursive;
+      font-size: 1.25rem;
+      text-align: center;
+      opacity: 0.9;
+      margin-bottom: 16px;
+    }
+    .header-buttons {
+      display: flex;
+      gap: 16px;
+    }
     #posts, #profile-posts { }
     .post {
       background: #2a2a2a;
@@ -100,20 +108,23 @@
       border-radius: 8px;
       cursor: pointer;
     }
-    /* Notification & Logout button */
+    /* Notification & Logout button styling */
     #notification-btn, #logout-btn {
-      background: none;
       border: none;
       cursor: pointer;
-      color: #ccc;
-      font-size: 1.4rem;
+      font-size: 1rem;
     }
     #logout-btn {
       background: #1976d2;
       color: #fff;
       padding: 6px 12px;
       border-radius: 6px;
-      font-size: 1rem;
+    }
+    #notification-btn {
+      background: none;
+      color: #ccc;
+      padding: 6px;
+      border-radius: 6px;
     }
     /* Modal overlay common */
     .modal-overlay {
@@ -277,17 +288,17 @@
     <button id="login-btn">Sign in with Google</button>
   </div>  <!-- Main feed -->  <div id="app">
     <div class="section header">
-      <button id="logout-btn" title="Logout">Logout</button>
-      <div class="title-container">
-        <h1>Ghost Story Hub</h1>
-        <h2>horror story platform</h2>
+      <h1>Ghost Story Hub</h1>
+      <h2>horror story platform</h2>
+      <div class="header-buttons">
+        <button id="logout-btn" title="Logout">Logout</button>
+        <button id="notification-btn" title="Notifications">
+          <!-- Heroicons bell -->
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+          </svg>
+        </button>
       </div>
-      <button id="notification-btn" title="Notifications">
-        <!-- Heroicons bell -->
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-        </svg>
-      </button>
     </div>
     <button id="post-story-btn">Post a story</button>
     <div id="posts"></div>
@@ -356,278 +367,3 @@
     const profileView     = document.getElementById('profile-view');
     const backBtn         = document.getElementById('back-btn');
     const profileName     = document.getElementById('profile-name');
-    const profileBadges   = document.getElementById('profile-badges');
-    const profilePosts    = document.getElementById('profile-posts');
-    const menuBtn         = document.querySelector('.menu-btn');
-    const menuOptions     = document.getElementById('menu-options');
-    const notificationBtn = document.getElementById('notification-btn');
-    const notificationOverlay = document.getElementById('notification-overlay');
-    const notificationList = document.getElementById('notification-list');
-    const notificationClose = document.getElementById('notification-close');
-    const logoutBtn       = document.getElementById('logout-btn');
-
-    let currentUser = null;
-    let activePostId = null;
-    let viewingUid = null;
-
-    // Badge helpers
-    async function getBadges(uid) {
-      const snap = await db.ref(`badges/${uid}`).once('value');
-      const data = snap.val() || {};
-      if (uid === currentUser.uid && currentUser.email === 'samiulhaquerafsan@gmail.com') {
-        data.owner = true;
-        data.staff = true;
-      }
-      return data;
-    }
-    function renderBadge(imgFile) {
-      const img = document.createElement('img');
-      img.src = imgFile;
-      img.alt = 'badge';
-      return img;
-    }
-
-    // Show feed
-    function showFeed() {
-      profileView.style.display = 'none';
-      appDiv.style.display = 'block';
-      loadPosts();
-    }
-    // Show profile
-    async function showProfile(uid) {
-      viewingUid = uid;
-      appDiv.style.display = 'none';
-      profileView.style.display = 'block';
-      const snap = await db.ref(`users/${uid}/name`).once('value');
-      profileName.textContent = snap.val() || 'Unknown';
-      profileBadges.innerHTML = '';
-      const badges = await getBadges(uid);
-      if (badges.owner)     profileBadges.append(renderBadge('owner.png'));
-      if (badges.staff)     profileBadges.append(renderBadge('staff.png'));
-      if (badges.topWriter) profileBadges.append(renderBadge('topwriter.png'));
-      profilePosts.innerHTML = '';
-      const postsSnap = await db.ref('posts').orderByChild('uid').equalTo(uid).once('value');
-      Object.entries(postsSnap.val() || {}).forEach(([id, post]) => {
-        const div = document.createElement('div');
-        div.className = 'post';
-        const t = document.createElement('h4'); t.textContent = post.title;
-        const b = document.createElement('p'); b.textContent = post.text;
-        div.append(t, b);
-        profilePosts.append(div);
-      });
-      // menu logic
-      menuOptions.innerHTML = '';
-      const meBadges = await getBadges(currentUser.uid);
-      const tgtBadges = await getBadges(uid);
-      const canOpen = meBadges.owner || (meBadges.staff && !meBadges.owner);
-      menuBtn.style.display = (uid !== currentUser.uid && canOpen) ? 'block' : 'none';
-      menuBtn.onclick = () => {
-        menuOptions.style.display = menuOptions.style.display === 'block' ? 'none' : 'block';
-      };
-      if (uid !== currentUser.uid && meBadges.owner) {
-        const btnS = document.createElement('button');
-        btnS.textContent = tgtBadges.staff ? 'Remove from staff' : 'Make staff';
-        btnS.onclick = async () => {
-          await db.ref(`badges/${uid}/staff`).set(!tgtBadges.staff);
-          showProfile(uid);
-        };
-        menuOptions.append(btnS);
-        const btnT = document.createElement('button');
-        btnT.textContent = tgtBadges.topWriter ? 'Remove from top writer' : 'Make top writer';
-        btnT.onclick = async () => {
-          await db.ref(`badges/${uid}/topWriter`).set(!tgtBadges.topWriter);
-          showProfile(uid);
-        };
-        menuOptions.append(btnT);
-      } else if (uid !== currentUser.uid && meBadges.staff) {
-        const btnT = document.createElement('button');
-        btnT.textContent = tgtBadges.topWriter ? 'Remove from top writer' : 'Make top writer';
-        btnT.onclick = async () => {
-          await db.ref(`badges/${uid}/topWriter`).set(!tgtBadges.topWriter);
-          showProfile(uid);
-        };
-        menuOptions.append(btnT);
-      }
-    }
-    backBtn.onclick = () => showFeed();
-
-    // Auth state
-    auth.onAuthStateChanged(async user => {
-      if (user) {
-        currentUser = user;
-        await db.ref(`users/${user.uid}/name`).set(user.displayName || user.email.split('@')[0]);
-        loginScreen.style.display = 'none';
-        showFeed();
-        listenNotifications();
-      } else {
-        loginScreen.style.display = 'flex';
-        appDiv.style.display = profileView.style.display = 'none';
-      }
-    });
-    loginBtn.onclick = () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
-    logoutBtn.onclick = () => auth.signOut();
-
-    // Load posts
-    function loadPosts() {
-      db.ref('posts').off();
-      db.ref('posts').on('value', snap => {
-        postsDiv.innerHTML = '';
-        const data = snap.val() || {};
-        const entries = Object.entries(data).sort((a,b) => b[1].createdAt - a[1].createdAt);
-        entries.forEach(([id, post]) => {
-          const div = document.createElement('div');
-          div.className = 'post';
-          const uname = document.createElement('div');
-          uname.className = 'username';
-          uname.textContent = post.name;
-          uname.onclick = () => showProfile(post.uid);
-          const t = document.createElement('h4'); t.textContent = post.title;
-          const b = document.createElement('p'); b.textContent = post.text;
-          const footer = document.createElement('div');
-          footer.className = 'post-footer';
-          const commentsBtn = document.createElement('button');
-          commentsBtn.textContent = 'Comments';
-          commentsBtn.onclick = () => openComments(id, post.uid);
-          const likeBtn = document.createElement('button');
-          likeBtn.className = 'like-btn';
-          likeBtn.innerHTML = `<svg xmlns=\"http://www.w3.org/2000/svg\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\" width=\"20\" height=\"20\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 21.364l-7.682-7.682a4.5 4.5 0 010-6.364z\"/></svg> <span class=\"like-count\">0</span>`;
-          db.ref(`likes/${id}`).once('value').then(snapLikes => {
-            const likesObj = snapLikes.val() || {};
-            const count = Object.keys(likesObj).length;
-            likeBtn.querySelector('.like-count').textContent = count;
-            if (currentUser && likesObj[currentUser.uid]) {
-              likeBtn.classList.add('active');
-            }
-          });
-          likeBtn.onclick = () => {
-            if (!currentUser) return;
-            const likeRef = db.ref(`likes/${id}/${currentUser.uid}`);
-            likeRef.once('value').then(snapLike => {
-              if (snapLike.exists()) {
-                likeRef.remove();
-                likeBtn.classList.remove('active');
-                const span = likeBtn.querySelector('.like-count');
-                span.textContent = parseInt(span.textContent) - 1;
-              } else {
-                likeRef.set(true);
-                likeBtn.classList.add('active');
-                const span = likeBtn.querySelector('.like-count');
-                span.textContent = parseInt(span.textContent) + 1;
-                if (post.uid !== currentUser.uid) {
-                  db.ref(`notifications/${post.uid}`).push({
-                    type: 'like',
-                    fromUid: currentUser.uid,
-                    fromName: currentUser.displayName || currentUser.email.split('@')[0],
-                    postId: id,
-                    createdAt: Date.now()
-                  });
-                }
-              }
-            });
-          };
-          footer.append(commentsBtn, likeBtn);
-          div.append(uname, t, b, footer);
-          postsDiv.append(div);
-        });
-      });
-    }
-
-    // Story modal
-    postBtn.onclick = () => modalOverlay.style.display = 'flex';
-    modalOverlay.onclick = e => { if (e.target === modalOverlay) modalOverlay.style.display = 'none'; };
-    submitStory.onclick = () => {
-      const title = titleInput.value.trim();
-      const text  = textInput.value.trim();
-      if (!title || !text) return alert('Both title & story required!');
-      db.ref('posts').push({
-        uid: currentUser.uid,
-        name: currentUser.displayName || currentUser.email.split('@')[0],
-        title, text, createdAt: Date.now()
-      });
-      titleInput.value = '';
-      textInput.value = '';
-      modalOverlay.style.display = 'none';
-    };
-
-    // Comments modal
-    function openComments(postId, postOwnerUid) {
-      activePostId = postId;
-      commentsList.innerHTML = '';
-      commentsOverlay.style.display = 'flex';
-      db.ref(`posts/${postId}/views`).transaction(v => (v || 0) + 1);
-      db.ref(`comments/${postId}`).on('value', snap => {
-        commentsList.innerHTML = '';
-        const data = snap.val() || {};
-        Object.values(data).forEach(c => {
-          const ci = document.createElement('div');
-          ci.className = 'comment-item';
-          const cu = document.createElement('div');
-          cu.className = 'c-username';
-          cu.textContent = c.name || 'Anonymous';
-          const ct = document.createElement('div');
-          ct.textContent = c.text;
-          ci.append(cu, ct);
-          commentsList.append(ci);
-        });
-      });
-    }
-    commentsClose.onclick = () => { commentsOverlay.style.display = 'none'; commentInput.value = ''; db.ref(`comments/${activePostId}`).off(); };
-    commentsOverlay.onclick = e => { if (e.target === commentsOverlay) commentsOverlay.style.display = 'none'; };
-    submitComment.onclick = () => {
-      const txt = commentInput.value.trim();
-      if (!txt) return;
-      const commentRef = db.ref(`comments/${activePostId}`).push();
-      commentRef.set({
-        name: currentUser.displayName || currentUser.email.split('@')[0],
-        text: txt,
-        createdAt: Date.now()
-      });
-      db.ref(`posts/${activePostId}/uid`).once('value').then(snap => {
-        const ownerUid = snap.val();
-        if (ownerUid && ownerUid !== currentUser.uid) {
-          db.ref(`notifications/${ownerUid}`).push({
-            type: 'comment',
-            fromUid: currentUser.uid,
-            fromName: currentUser.displayName || currentUser.email.split('@')[0],
-            postId: activePostId,
-            text: txt,
-            createdAt: Date.now()
-          });
-        }
-      });
-      commentInput.value = '';
-    };
-
-    // Notifications modal
-    function listenNotifications() {
-      if (!currentUser) return;
-      db.ref(`notifications/${currentUser.uid}`).on('value', snap => {
-        const data = snap.val() || {};
-        // Could show badge indicator
-      });
-    }
-    notificationBtn.onclick = () => {
-      notificationList.innerHTML = '';
-      notificationOverlay.style.display = 'flex';
-      if (!currentUser) return;
-      db.ref(`notifications/${currentUser.uid}`).once('value').then(snap => {
-        const data = snap.val() || {};
-        Object.values(data).forEach(n => {
-          const ni = document.createElement('div');
-          ni.className = 'notification-item';
-          let text = '';
-          if (n.type === 'like') {
-            text = `এই৷ ইউজার ${n.fromName} তোমার এই পোস্টে লাইক করেছে, অনেকটা ফেসবুক নোটিফিকেশনের মতো।`;
-          } else if (n.type === 'comment') {
-            text = `এই৷ ইউজার ${n.fromName} তোমার এই পোস্টে কমেন্ট করেছে: "${n.text}", অনেকটা ফেসবুক নোটিফিকেশনের মতো।`;
-          }
-          ni.textContent = text;
-          notificationList.append(ni);
-        });
-        db.ref(`notifications/${currentUser.uid}`).remove();
-      });
-    };
-    notificationClose.onclick = () => { notificationOverlay.style.display = 'none'; };
-    notificationOverlay.onclick = e => { if (e.target === notificationOverlay) notificationOverlay.style.display = 'none'; };
-  </script></body>
-</html>
