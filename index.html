@@ -7,15 +7,23 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
- <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="icon" type="image/png" href="favicon.png">
   <style>
     * { margin:0; padding:0; box-sizing:border-box; font-family: sans-serif; }
-    body { background: #121212; color: #eee; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; padding: 20px; }
-    /* Mobile-screen container */
+    body {
+      background: #121212;
+      color: #eee;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    /* Mobile-screen container: 높이 বাড়ানো */
     #login-screen {
       position: relative;
       width: min(400px, 90vw);
-      aspect-ratio: 9/16;
+      height: 70vh; /* আগের aspect-ratio বাদ দিয়ে উচ্চতা বাড়ানো */
       background: url('signin.png') center/cover no-repeat;
       display: flex;
       justify-content: center;
@@ -33,28 +41,61 @@
       cursor: pointer;
     }
     /* App container */
-    #app, #profile-view { display: none; width: 100%; max-width: 800px; margin-top: 20px; }
+    #app, #profile-view {
+      display: none;
+      width: 100%;
+      max-width: 800px;
+      margin-top: 20px;
+    }
     .section {
       background: #1e1e1e;
       padding: 16px;
       border-radius: 12px;
       margin-bottom: 16px;
     }
-    .section h1 { font-family: 'Creepster', cursive; font-size: 2rem; text-align: center; }
-    .section h2 { font-family: 'Creepster', cursive; font-size: 1rem; text-align: center; opacity: 0.7; margin-top: 4px; }
+    /* Header layout: column with title, then buttons, then subtitle */
+    .header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px;
+    }
+    .header h1 {
+      font-family: 'Creepster', cursive;
+      font-size: 2.5rem;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    .header-buttons {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 8px; /* subtitle-এর আগে স্পেসিং */
+    }
+    .header-buttons button {
+      /*Logout এবং notification বাটনের স্টাইল দেয়া হবে পৃথক আইডি অনুযায়ী*/
+    }
+    .header h2 {
+      font-family: 'Creepster', cursive;
+      font-size: 1.25rem;
+      text-align: center;
+      opacity: 0.9;
+      margin-top: 0;
+      margin-bottom: 16px;
+    }
     #posts, #profile-posts { }
     .post {
       background: #2a2a2a;
       padding: 12px;
       border-radius: 8px;
       margin-bottom: 12px;
+      position: relative;
     }
     .post .username {
       font-weight: bold;
       cursor: pointer;
       margin-bottom: 6px;
     }
-    /* Post footer: comments & views */
+    /* Post footer: comments & likes */
     .post-footer {
       display: flex;
       justify-content: space-between;
@@ -62,6 +103,7 @@
       margin-top: 12px;
       padding-top: 8px;
       border-top: 1px solid #3a3a3a;
+      gap: 12px;
     }
     .post-footer button {
       background: none;
@@ -69,11 +111,11 @@
       color: #90caf9;
       cursor: pointer;
       font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 4px;
     }
-    .post-footer .views {
-      font-size: 0.9rem;
-      opacity: 0.8;
-    }
+    .post-footer .like-btn.active svg { fill: #e91e63; }
     /* Post a story button */
     #post-story-btn {
       display: block;
@@ -83,6 +125,23 @@
       padding: 10px 16px;
       margin: 0 auto 16px;
       border-radius: 8px;
+      cursor: pointer;
+    }
+    /* Notification & Logout button styling */
+    #logout-btn {
+      background: #1976d2;
+      color: #fff;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    #notification-btn {
+      background: none;
+      color: #ccc;
+      padding: 6px;
+      border: none;
+      border-radius: 6px;
       cursor: pointer;
     }
     /* Modal overlay common */
@@ -165,6 +224,41 @@
       top: 10px; right: 14px;
       background: none; border:none; font-size:1.4rem; color:#ccc; cursor:pointer;
     }
+    /* Notifications modal */
+    #notification-overlay.modal-overlay { align-items: flex-start; padding-top: 40px; }
+    #notification-modal {
+      background: #1f1f1f;
+      padding: 20px;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 500px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    #notification-modal h3 {
+      text-align: center;
+      margin-bottom: 12px;
+    }
+    #notification-list {
+      flex: 1;
+      overflow-y: auto;
+      margin-bottom: 12px;
+    }
+    .notification-item {
+      background: #2a2a2a;
+      padding: 8px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      color: #eee;
+      font-size: 0.9rem;
+    }
+    #notification-close {
+      position: absolute;
+      top: 10px; right: 14px;
+      background: none; border:none; font-size:1.4rem; color:#ccc; cursor:pointer;
+    }
     /* Profile view badges */
     #profile-badges {
       display: flex;
@@ -214,8 +308,22 @@
 
   <!-- Main feed -->
   <div id="app">
-    <div class="section">
+    <div class="section header">
       <h1>Ghost Story Hub</h1>
+      <div class="header-buttons">
+        <button id="logout-btn" title="Logout">Logout</button>
+        <button id="notification-btn" title="Notifications">
+          <!-- Heroicons bell -->
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 
+                     00-4-5.659V5a2 2 0 10-4 0v.341C7.67 
+                     6.165 6 8.388 6 11v3.159c0 .538-.214 
+                     1.055-.595 1.436L4 17h5m6 0v1a3 3 0 
+                     11-6 0v-1m6 0H9" />
+          </svg>
+        </button>
+      </div>
       <h2>horror story platform</h2>
     </div>
     <button id="post-story-btn">Post a story</button>
@@ -257,10 +365,19 @@
     </div>
   </div>
 
+  <!-- Notifications modal -->
+  <div id="notification-overlay" class="modal-overlay">
+    <div id="notification-modal">
+      <button id="notification-close">&times;</button>
+      <h3>Notifications</h3>
+      <div id="notification-list"></div>
+    </div>
+  </div>
+
   <script>
     // Firebase init
     const firebaseConfig = {
-     apiKey:    "AIzaSyDQDghMUXcjcLufG3xU94pUx-J0r9TUu6Q",
+      apiKey:    "AIzaSyDQDghMUXcjcLufG3xU94pUx-J0r9TUu6Q",
       authDomain:"gconnect-7fe65.firebaseapp.com",
       databaseURL:"https://gconnect-7fe65-default-rtdb.asia-southeast1.firebasedatabase.app",
       projectId: "gconnect-7fe65",
@@ -282,200 +399,245 @@
     const submitStory     = document.getElementById('submit-story');
     const titleInput      = document.getElementById('story-title');
     const textInput       = document.getElementById('story-text');
-
     const commentsOverlay = document.getElementById('comments-overlay');
     const commentsList    = document.getElementById('comments-list');
     const commentInput    = document.getElementById('comment-input');
     const submitComment   = document.getElementById('submit-comment');
     const commentsClose   = document.getElementById('comments-close');
-
     const profileView     = document.getElementById('profile-view');
     const backBtn         = document.getElementById('back-btn');
     const profileName     = document.getElementById('profile-name');
-    const profileBadges   = document.getElementById('profile-badges');
-    const profilePosts    = document.getElementById('profile-posts');
-    const menuBtn         = document.querySelector('.menu-btn');
-    const menuOptions     = document.getElementById('menu-options');
+    const logoutBtn       = document.getElementById('logout-btn');
+    const notificationBtn = document.getElementById('notification-btn');
+    const notificationOverlay = document.getElementById('notification-overlay');
+    const notificationClose   = document.getElementById('notification-close');
+    const notificationList    = document.getElementById('notification-list');
 
-    let currentUser = null;
-    let activePostId = null;
-    let viewingUid = null;
-
-    // Badge helpers
-    async function getBadges(uid) {
-      const snap = await db.ref(`badges/${uid}`).once('value');
-      const data = snap.val() || {};
-      if (uid === currentUser.uid && currentUser.email === 'samiulhaquerafsan@gmail.com') {
-        data.owner = true;
-        data.staff = true;
-      }
-      return data;
-    }
-    function renderBadge(imgFile) {
-      const img = document.createElement('img');
-      img.src = imgFile;
-      return img;
-    }
-
-    // Show feed
-    function showFeed() {
-      profileView.style.display = 'none';
-      appDiv.style.display = 'block';
-      loadPosts();
-    }
-    // Show profile
-    async function showProfile(uid) {
-      viewingUid = uid;
-      appDiv.style.display = 'none';
-      profileView.style.display = 'block';
-      const snap = await db.ref(`users/${uid}/name`).once('value');
-      profileName.textContent = snap.val() || 'Unknown';
-      profileBadges.innerHTML = '';
-      const badges = await getBadges(uid);
-      if (badges.owner)     profileBadges.append(renderBadge('owner.png'));
-      if (badges.staff)     profileBadges.append(renderBadge('staff.png'));
-      if (badges.topWriter) profileBadges.append(renderBadge('topwriter.png'));
-      profilePosts.innerHTML = '';
-      const postsSnap = await db.ref('posts').orderByChild('uid').equalTo(uid).once('value');
-      Object.values(postsSnap.val() || {}).forEach(post => {
-        const div = document.createElement('div');
-        div.className = 'post';
-        const t = document.createElement('h4'); t.textContent = post.title;
-        const b = document.createElement('p'); b.textContent = post.text;
-        div.append(t, b);
-        profilePosts.append(div);
-      });
-      // menu logic
-      menuOptions.innerHTML = '';
-      const meBadges = await getBadges(currentUser.uid);
-      const tgtBadges = await getBadges(uid);
-      const canOpen = meBadges.owner || (meBadges.staff && !meBadges.owner);
-      menuBtn.style.display = (uid !== currentUser.uid && canOpen) ? 'block' : 'none';
-      menuBtn.onclick = () => {
-        menuOptions.style.display = menuOptions.style.display === 'block' ? 'none' : 'block';
-      };
-      if (uid !== currentUser.uid && meBadges.owner) {
-        const btnS = document.createElement('button');
-        btnS.textContent = tgtBadges.staff ? 'Remove from staff' : 'Make staff';
-        btnS.onclick = async () => {
-          await db.ref(`badges/${uid}/staff`).set(!tgtBadges.staff);
-          showProfile(uid);
-        };
-        menuOptions.append(btnS);
-        const btnT = document.createElement('button');
-        btnT.textContent = tgtBadges.topWriter ? 'Remove from top writer' : 'Make top writer';
-        btnT.onclick = async () => {
-          await db.ref(`badges/${uid}/topWriter`).set(!tgtBadges.topWriter);
-          showProfile(uid);
-        };
-        menuOptions.append(btnT);
-      } else if (uid !== currentUser.uid && meBadges.staff) {
-        const btnT = document.createElement('button');
-        btnT.textContent = tgtBadges.topWriter ? 'Remove from top writer' : 'Make top writer';
-        btnT.onclick = async () => {
-          await db.ref(`badges/${uid}/topWriter`).set(!tgtBadges.topWriter);
-          showProfile(uid);
-        };
-        menuOptions.append(btnT);
-      }
-    }
-    backBtn.onclick = () => showFeed();
-
-    // Auth state
-    auth.onAuthStateChanged(async user => {
+    // Authentication state observer
+    auth.onAuthStateChanged(user => {
       if (user) {
-        currentUser = user;
-        await db.ref(`users/${user.uid}/name`).set(user.displayName || user.email.split('@')[0]);
         loginScreen.style.display = 'none';
-        showFeed();
+        appDiv.style.display = 'block';
+        loadPosts();
+        loadNotifications();
       } else {
+        appDiv.style.display = 'none';
+        profileView.style.display = 'none';
         loginScreen.style.display = 'flex';
-        appDiv.style.display = profileView.style.display = 'none';
       }
     });
-    loginBtn.onclick = () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
 
-    // Load posts
+    // Google Sign-in
+    loginBtn.addEventListener('click', () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider).catch(err => {
+        console.error('Sign-in error', err);
+      });
+    });
+
+    // Logout
+    logoutBtn.addEventListener('click', () => {
+      auth.signOut();
+    });
+
+    // Load posts from Firebase
     function loadPosts() {
-      db.ref('posts').on('value', snap => {
+      postsDiv.innerHTML = '';
+      db.ref('posts').orderByChild('timestamp').limitToLast(100).on('value', snapshot => {
         postsDiv.innerHTML = '';
-        const data = snap.val() || {};
-        Object.entries(data).forEach(([id, post]) => {
-          const div = document.createElement('div');
-          div.className = 'post';
-          const uname = document.createElement('div');
-          uname.className = 'username';
-          uname.textContent = post.name;
-          uname.onclick = () => showProfile(post.uid);
-          const t = document.createElement('h4'); t.textContent = post.title;
-          const b = document.createElement('p'); b.textContent = post.text;
-          // footer
-          const footer = document.createElement('div');
-          footer.className = 'post-footer';
-          const commentsBtn = document.createElement('button');
-          commentsBtn.textContent = 'Comments';
-          commentsBtn.onclick = () => openComments(id);
-          const viewsSpan = document.createElement('div');
-          viewsSpan.className = 'views';
-          viewsSpan.textContent = `views: ${post.views || 0}`;
-          footer.append(commentsBtn, viewsSpan);
-          div.append(uname, t, b, footer);
-          postsDiv.append(div);
+        const posts = [];
+        snapshot.forEach(child => {
+          posts.push({ id: child.key, ...child.val() });
+        });
+        // পুরানো থেকে নতুন: sort ascending timestamp
+        posts.sort((a,b) => a.timestamp - b.timestamp);
+        posts.forEach(post => {
+          renderPost(post, postsDiv);
         });
       });
     }
 
-    // Story modal
-    postBtn.onclick = () => modalOverlay.style.display = 'flex';
-    modalOverlay.onclick = e => { if (e.target === modalOverlay) modalOverlay.style.display = 'none'; };
-    submitStory.onclick = () => {
-      const title = titleInput.value.trim();
-      const text  = textInput.value.trim();
-      if (!title || !text) return alert('Both title & story required!');
-      db.ref('posts').push({
-        uid: currentUser.uid,
-        name: currentUser.displayName || currentUser.email.split('@')[0],
-        title, text, createdAt: Date.now(), views: 0
+    // Render a post element
+    function renderPost(post, container) {
+      const div = document.createElement('div');
+      div.classList.add('post');
+      const uname = document.createElement('div');
+      uname.classList.add('username');
+      uname.textContent = post.username || 'Unknown';
+      uname.addEventListener('click', () => {
+        openProfile(post.userId, post.username);
       });
-      titleInput.value = '';
-      textInput.value = '';
-      modalOverlay.style.display = 'none';
-    };
+      div.appendChild(uname);
 
-    // Comments modal
+      const titleEl = document.createElement('h3');
+      titleEl.textContent = post.title;
+      titleEl.style.marginBottom = '6px';
+      div.appendChild(titleEl);
+
+      const textEl = document.createElement('p');
+      textEl.textContent = post.text;
+      div.appendChild(textEl);
+
+      // Footer with likes/comments
+      const footer = document.createElement('div');
+      footer.classList.add('post-footer');
+      // Like button
+      const likeBtn = document.createElement('button');
+      likeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" 
+                   viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                   d="M5 15l7-7 7 7" /></svg> Like`;
+      likeBtn.classList.add('like-btn');
+      likeBtn.addEventListener('click', () => {
+        // Implement like logic…
+      });
+      footer.appendChild(likeBtn);
+      // Comment button
+      const commentBtn = document.createElement('button');
+      commentBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" 
+                     viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                     d="M17 8h2a2 2 0 012 2v8l-4-4H7a2 2 0 01-2-2V10a2 2 0 012-2h2" /></svg> Comments`;
+      commentBtn.addEventListener('click', () => {
+        openComments(post.id);
+      });
+      footer.appendChild(commentBtn);
+
+      div.appendChild(footer);
+      container.prepend(div);
+    }
+
+    // Open new story modal
+    postBtn.addEventListener('click', () => {
+      modalOverlay.style.display = 'flex';
+    });
+    modalOverlay.addEventListener('click', e => {
+      if (e.target === modalOverlay) modalOverlay.style.display = 'none';
+    });
+    submitStory.addEventListener('click', () => {
+      const title = titleInput.value.trim();
+      const text = textInput.value.trim();
+      const user = auth.currentUser;
+      if (title && text && user) {
+        const newPostRef = db.ref('posts').push();
+        newPostRef.set({
+          userId: user.uid,
+          username: user.displayName,
+          title,
+          text,
+          timestamp: Date.now()
+        }).then(() => {
+          titleInput.value = '';
+          textInput.value = '';
+          modalOverlay.style.display = 'none';
+        });
+      }
+    });
+
+    // Open comments modal
+    let currentPostId = null;
     function openComments(postId) {
-      activePostId = postId;
+      currentPostId = postId;
       commentsList.innerHTML = '';
       commentsOverlay.style.display = 'flex';
+      // Load comments
       db.ref(`comments/${postId}`).on('value', snap => {
         commentsList.innerHTML = '';
-        const data = snap.val() || {};
-        Object.values(data).forEach(c => {
-          const ci = document.createElement('div');
-          ci.className = 'comment-item';
-          const cu = document.createElement('div');
-          cu.className = 'c-username';
-          cu.textContent = c.name || 'Anonymous';
-          const ct = document.createElement('div');
-          ct.textContent = c.text;
-          ci.append(cu, ct);
-          commentsList.append(ci);
+        snap.forEach(child => {
+          const c = child.val();
+          const item = document.createElement('div');
+          item.classList.add('comment-item');
+          const uel = document.createElement('div');
+          uel.classList.add('c-username');
+          uel.textContent = c.username;
+          const tel = document.createElement('div');
+          tel.textContent = c.text;
+          item.appendChild(uel);
+          item.appendChild(tel);
+          commentsList.appendChild(item);
         });
       });
     }
-    commentsClose.onclick = () => { commentsOverlay.style.display = 'none'; commentInput.value = ''; };
-    commentsOverlay.onclick = e => { if (e.target === commentsOverlay) commentsOverlay.style.display = 'none'; };
+    commentsClose.addEventListener('click', () => {
+      commentsOverlay.style.display = 'none';
+      // detach listener if needed
+    });
+    submitComment.addEventListener('click', () => {
+      const text = commentInput.value.trim();
+      const user = auth.currentUser;
+      if (text && user && currentPostId) {
+        const cRef = db.ref(`comments/${currentPostId}`).push();
+        cRef.set({
+          username: user.displayName,
+          userId: user.uid,
+          text,
+          timestamp: Date.now()
+        }).then(() => {
+          commentInput.value = '';
+        });
+      }
+    });
 
-    submitComment.onclick = () => {
-      const txt = commentInput.value.trim();
-      if (!txt) return;
-      db.ref(`comments/${activePostId}`).push({
-        name: currentUser.displayName || currentUser.email.split('@')[0],
-        text: txt,
-        createdAt: Date.now()
+    // Notifications
+    function loadNotifications() {
+      const user = auth.currentUser;
+      if (!user) return;
+      // উদাহরণ: আপনি এখানে Firebase থেকে নোটিফিকেশন লোড করতে পারেন
+      // এখানে ডামি লিস্ট দেখানো হলো
+      notificationList.innerHTML = '';
+      db.ref(`notifications/${user.uid}`).on('value', snap => {
+        notificationList.innerHTML = '';
+        snap.forEach(child => {
+          const note = child.val();
+          const item = document.createElement('div');
+          item.classList.add('notification-item');
+          item.textContent = note.text;
+          notificationList.appendChild(item);
+        });
       });
-      commentInput.value = '';
-    };
+    }
+    notificationBtn.addEventListener('click', () => {
+      notificationOverlay.style.display = 'flex';
+    });
+    notificationOverlay.addEventListener('click', e => {
+      if (e.target === notificationOverlay) notificationOverlay.style.display = 'none';
+    });
+    notificationClose.addEventListener('click', () => {
+      notificationOverlay.style.display = 'none';
+    });
+
+    // Profile view
+    function openProfile(userId, username) {
+      profileView.style.display = 'block';
+      appDiv.style.display = 'none';
+      profileName.textContent = username;
+      loadProfilePosts(userId);
+      loadProfileBadges(userId);
+    }
+    backBtn.addEventListener('click', () => {
+      profileView.style.display = 'none';
+      appDiv.style.display = 'block';
+    });
+    function loadProfilePosts(userId) {
+      const container = document.getElementById('profile-posts');
+      container.innerHTML = '';
+      db.ref('posts').orderByChild('userId').equalTo(userId).on('value', snap => {
+        container.innerHTML = '';
+        snap.forEach(child => {
+          renderPost(child.val(), container);
+        });
+      });
+    }
+    function loadProfileBadges(userId) {
+      const badgesDiv = document.getElementById('profile-badges');
+      badgesDiv.innerHTML = '';
+      // উদাহরণ: Firebase থেকে ব্যাজ ডেটা নিয়ে দেখানো
+      // এখানে ডামি ইমেজ দেখানো হলো
+      const img = document.createElement('img');
+      img.src = 'badge-placeholder.png';
+      img.alt = 'Badge';
+      badgesDiv.appendChild(img);
+    }
   </script>
 </body>
-        </html>
+          </html>
